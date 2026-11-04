@@ -7,6 +7,10 @@
 /** Installed in every page of a recorded window (an init script). */
 export function installOverlay({ label }) {
   if (window !== window.top) return; // one cursor, in the top page: the recorder moves it over frames too
+  // pages made to open as popups (the Developer Console) resize their window, and the video would keep only that part
+  window.resizeTo = () => {};
+  window.resizeBy = () => {};
+  window.moveTo = () => {};
   const install = () => {
     if (document.getElementById('__sfdemoCursor')) return;
     const c = document.createElement('div');
