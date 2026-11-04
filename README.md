@@ -1,18 +1,21 @@
-# Agentforce conversation recorder (`sfdemo`)
+# Salesforce demo studio (`sfdemo`)
 
-Records Agentforce conversations for you. You write the questions in a small text file; `sfdemo` types them in a
-real browser, waits for each answer, and gives you a screenshot per answer, an MP4, a GIF, a transcript and an
-HTML report. It works on the **Lightning Agentforce panel** and on **Embedded Messaging** chat widgets (as a guest
-or a signed-in user), from the command line or from a local web page.
+Records your Salesforce demos for you, in one video: your slides, a voice-over read by a natural-sounding voice in
+your language, and the live part (Setup pages, records, Experience Cloud sites, Agentforce chats) played in a
+real browser while the voice explains it. You write what to say and what to show in one text file, or ask Claude to
+write it; `sfdemo` does the rest, the same way every time, and gives you an MP4 with chapters and subtitles.
 
-No AI at record time: nothing to configure, no tokens spent, the same script plays the same way every time.
+It also records Agentforce conversations on their own (screenshots, a short video, a GIF, a transcript and a
+report with checks), on the Lightning Agentforce panel and on Embedded Messaging chat widgets.
+
+The voice runs on your machine ([Piper](https://github.com/OHF-Voice/piper1-gpl), 58 languages): nothing is sent
+anywhere, and nothing costs anything. No AI is needed to record; Claude only helps you write, if you want it to.
 
 ## Install
 
-> **Not on npm yet.** `npm install --global salesforce-demo-studio` does not work for now: install it
-> from GitHub as below.
+> **Not on npm yet.** Install it from GitHub as below.
 
-You need [Node.js](https://nodejs.org) 20 or later, git, and the
+You need [Node.js](https://nodejs.org) 20 or later, git, Python 3 (for the voice), and the
 [Salesforce CLI](https://developer.salesforce.com/tools/salesforcecli) logged in to your org:
 
 ```sh
@@ -25,23 +28,93 @@ Then, once:
 git clone https://github.com/tprouvot/salesforce-demo-studio.git
 cd salesforce-demo-studio
 npm install
-npm link             # makes the sfdemo command available in every folder
-sfdemo setup          # installs the browser sfdemo drives, checks ffmpeg and the sf CLI
+npm link                 # makes the sfdemo command available in every folder
+sfdemo setup --voice     # the browser it drives, ffmpeg, the sf CLI, the voice engine and a first voice
 ```
 
 To update later: `git pull && npm install` in that folder. To remove: `npm unlink --global salesforce-demo-studio`.
+(`afrec`, the tool's former name, still works as a second name for the command.)
 
-## Record your first conversation
+## Make a demo with Claude
 
-**1. Make a project folder**, anywhere outside the clone:
+Add the skills of this repository to Claude Code (or another agent that reads skills). From the clone folder:
 
 ```sh
-mkdir my-demo && cd my-demo
-sfdemo init --org myOrg --example none    # sfdemo.config.json (myOrg by default), an empty scenarios/ folder
+mkdir -p ~/.claude/skills
+for s in salesforce-demo-studio demo-script-write demo-voice demo-deck agentforce-conversation-recorder agentforce-scenario-generate; do
+  ln -sfn "$PWD/skills/$s" ~/.claude/skills/$s
+done
 ```
 
-**2. Start a scenario.** `sfdemo new` finds your agent in the org and writes `scenarios/<agent>.md`, with what the
-agent can do (its topics and actions) in a comment, to give you ideas:
+Then ask, in your own words: *"make a 5-minute demo of our Named Credential setup in myOrg, in French, with a
+deck"*. Claude asks what it needs (the audience, the length, who appears on screen), reads what your org really
+has, writes the script, lets you hear a few voices, creates the Google Slides deck from the Salesforce template with
+the narration in its speaker notes, records the demo and shows you the video.
+
+| Skill | Does |
+| --- | --- |
+| [salesforce-demo-studio](skills/salesforce-demo-studio/SKILL.md) | the whole demo, from your goal to the video |
+| [demo-script-write](skills/demo-script-write/SKILL.md) | the script: chapters, what the voice says, the live steps |
+| [demo-voice](skills/demo-voice/SKILL.md) | the voice: language, pace, words it must say differently |
+| [demo-deck](skills/demo-deck/SKILL.md) | the Google Slides deck: slides, speaker notes, images for the video |
+
+## Make a demo by hand
+
+**1. A project folder**, anywhere outside the clone:
+
+```sh
+mkdir my-demos && cd my-demos
+sfdemo init --org myOrg --example none
+```
+
+**2. The script**, `demos/tour.md`: paragraphs are what the voice says, headings are chapters, list items are what
+happens on screen.
+
+```markdown
+---
+type: demo
+title: Our Named Credentials
+voice: en_US-ryan-high
+windows:
+  Admin: { path: /lightning/setup/SetupOneHome/home, label: "Admin · Setup" }
+---
+
+# The Named Credential
+
+- slide: 1
+
+Every callout goes through a Named Credential.
+
+- window: Admin
+- setup: Named Credentials
+- click: Demo ERP API
+
+Here it is: the URL of the API, and where its key comes from.
+```
+
+Slides are images in `demos/slides/` (`01.png`, `02.png`...): export them from your deck, or let the demo-deck
+skill do it. No deck? Leave out the `slide:` lines: the demo is live only. Everything a script can do:
+[docs/DEMOS.md](docs/DEMOS.md). A complete one: [examples/apex-callout-tour/](examples/apex-callout-tour/apex-callout-tour.md).
+
+**3. Listen, then record:**
+
+```sh
+sfdemo voices --language en                  # pick a voice; --try <voice> --play to hear it
+sfdemo narrate demos/tour.md                 # the voice-over: every line read once, each chapter's length
+sfdemo demo demos/tour.md                    # records the live parts and makes the video
+```
+
+You get `.local/recordings/tour/tour.mp4` (1920x1080, with chapters) and `tour.srt` (subtitles). A live chapter
+that fails (a button not found, an answer that does not come) is tried again, up to three times; one chapter can be
+recorded again on its own: `sfdemo demo demos/tour.md --only 2 --retake`.
+
+What it does in your org is what the script says: it signs in, opens pages and clicks. Script only what you want to
+happen (no Save or Delete unless that is the demo).
+
+## Agentforce conversations on their own
+
+`sfdemo new` finds your agent in the org and writes `scenarios/<agent>.md`, with what the agent can do (its topics
+and actions) in a comment, to give you ideas:
 
 ```sh
 sfdemo new                                  # the Agentforce panel in Lightning, as you
@@ -49,10 +122,7 @@ sfdemo new --user jordan.lee                # the same, logged in as another use
 sfdemo new --site https://<your-site>/      # the chat widget on a site, as a guest
 ```
 
-Several agents in the org? Add `--agent "<agent name>"`.
-
-**3. Write your questions** at the end of that file: one numbered line per message. Under a message, you can add
-checks on its answer. For example:
+Write your questions at the end of that file, one numbered line per message, with checks on the answers:
 
 ```markdown
 1. Hi
@@ -62,7 +132,7 @@ checks on its answer. For example:
 3. Group them by station.
 ```
 
-**4. Check, then record:**
+Then check, and record:
 
 ```sh
 sfdemo run --dry-run      # who signs in where, what will run; sends nothing
@@ -75,23 +145,7 @@ emails sent): don't script what you don't want to happen.
 Prefer clicking? `sfdemo ui` does the same in your browser: write scenarios, run them, watch the progress, browse
 the recordings.
 
-## Let a coding agent write the scenarios
-
-With Claude Code (or another agent that reads skills), add the two skills of this repository. From the clone
-folder:
-
-```sh
-mkdir -p ~/.claude/skills
-ln -s "$PWD/skills/agentforce-scenario-generate" "$PWD/skills/agentforce-conversation-recorder" ~/.claude/skills/
-```
-
-Then ask, for example: *"write a demo scenario for the agent in myOrg, logged in as jordan.lee, and record it"*.
-The agent reads what your agent can do, writes the questions and checks, tries them once, then tightens the
-checks. [agentforce-scenario-generate](skills/agentforce-scenario-generate/SKILL.md) writes the scenarios;
-[agentforce-conversation-recorder](skills/agentforce-conversation-recorder/SKILL.md) runs and reviews the
-recordings, and fixes the tool when a Salesforce release changes the chat.
-
-## What you get
+## What you get from a conversation
 
 For each conversation, in `.local/recordings/<date-time>/<conversation>/`:
 
@@ -130,6 +184,10 @@ Login-As needs "Administrators Can Log in as Any User" (Setup > Login Access Pol
 
 | Command | What it does |
 | --- | --- |
+| `sfdemo demo <demo.md>` | a whole demo: voice-over, live recording, video; `--only <chapter>`, `--retake`, `--video-only`, `--org`, `--headed` |
+| `sfdemo narrate <demo.md>` | the voice-over alone: every line read once, the length of each chapter |
+| `sfdemo voices` | the voices: `--language fr`, `--try <voice> --play`, `--download <voice>`, `--installed` |
+| `sfdemo notes <demo.md>` | what each slide's speaker notes should say (`--json` for the demo-deck skill) |
 | `sfdemo init` | a new project folder: `sfdemo.config.json`, `scenarios/`, `.gitignore` entries |
 | `sfdemo new [name]` | a scenario to start from: settings checked in the org, the agent's topics and actions listed in it; `--json` prints them |
 | `sfdemo run [files]` | record (default: every scenario in `scenarios/`); `--dry-run`, `--only <name>`, `--headed` to watch |
@@ -139,7 +197,7 @@ Login-As needs "Administrators Can Log in as Any User" (Setup > Login Access Pol
 | `sfdemo selectors list \| update \| promote \| check` | the chat locators: see them, download fixes, keep healed ones, validate a pack |
 | `sfdemo fixtures test \| add` | replay the offline test pages; turn a doctor snapshot into one |
 | `sfdemo baseline set <run>`, `sfdemo compare <run>` | compare two runs: what changed in each answer, timing, flags |
-| `sfdemo setup`, `sfdemo orgs` | install and check the prerequisites; list the sf CLI's orgs |
+| `sfdemo setup`, `sfdemo orgs` | install and check the prerequisites (`--voice`: Piper and a voice too); list the sf CLI's orgs |
 
 `sfdemo --help` lists every option.
 
@@ -187,6 +245,8 @@ const { conversations, errors } = planRun({ project, inputs: ['scenarios/'] });
 const { results, out } = await executeRun(conversations, { project, emit: e => console.log(e) });
 ```
 
+Demos too: `readDemo`, `narrate`, `recordDemo` and `assembleDemo` are what `sfdemo demo` chains.
+
 ## Privacy and security
 
 - Recordings show org data: they go to `.local/` (gitignored by `sfdemo init`); the run warns when they are not
@@ -194,6 +254,10 @@ const { results, out } = await executeRun(conversations, { project, emit: e => c
 - The UI listens on 127.0.0.1 only, behind a one-time token; changes need the token in a header, and the Host
   header is checked. Passwords never go through it.
 - Frontdoor and Login-As URLs carry sessions: they are never printed or written.
+- The voice-over is made on your machine. An `ai:` step sends the page's structure (its accessibility tree, which
+  can show record names) to Claude through your own Claude Code, once; the answer is saved next to the script.
+- Slide images exported from a company template stay out of public repositories (`examples/*/slides/` is
+  gitignored here).
 - Doctor snapshots are redacted before they are written (structure and UI labels only), and checked against your
   local denylist of names that must never be published (`.sfdemo/denylist.txt`, one term per line).
 

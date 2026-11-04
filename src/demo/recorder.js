@@ -228,8 +228,8 @@ export function nextTake(out, chapterNo) {
  */
 export async function recordDemo(demo, ctx) {
   const emit = ctx.emit || (() => {});
-  const { chromium } = await import('playwright');
-  const browser = await chromium.launch({ headless: !ctx.headed });
+  let browser = null;
+  const launch = async () => { if (!browser) { const { chromium } = await import('playwright'); browser = await chromium.launch({ headless: !ctx.headed }); } return browser; };
   const summary = [];
   try {
     for (const [i, chapter] of demo.chapters.entries()) {
@@ -242,14 +242,14 @@ export async function recordDemo(demo, ctx) {
       for (let k = 0; k < demo.settings.takes; k++) {
         const take = nextTake(ctx.out, n);
         emit({ type: 'chapter-start', chapter: n, title: chapter.title, take });
-        r = await recordChapter(browser, demo, n, take, { ...ctx, aiCache: ctx.aiCacheFile || path.join(ctx.stateDir, 'ai-steps.json') });
+        r = await recordChapter(await launch(), demo, n, take, { ...ctx, aiCache: ctx.aiCacheFile || path.join(ctx.stateDir, 'ai-steps.json') });
         emit({ type: 'chapter-end', chapter: n, title: chapter.title, take, failed: r.failed, reason: r.reason });
         if (!r.failed) break;
       }
       summary.push({ chapter: n, title: chapter.title, status: r.failed ? 'failed' : 'recorded', take: r.take, reason: r.reason });
     }
   } finally {
-    await browser.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
   }
   return summary;
 }

@@ -343,6 +343,7 @@ async function init(argv) {
   out(`wrote ${CONFIG_FILE}`);
   const scenarios = path.join(dir, 'scenarios');
   fs.mkdirSync(scenarios, { recursive: true });
+  fs.mkdirSync(path.join(dir, 'demos', 'slides'), { recursive: true }); // demo scripts, and their slide images
   const example = args.example || 'ebike';
   if (example !== 'none') {
     const src = path.join(PACKAGE_ROOT, 'examples', example);
@@ -360,7 +361,7 @@ async function init(argv) {
     fs.appendFileSync(gitignore, `${current && !current.endsWith('\n') ? '\n' : ''}# sfdemo: recordings and local state show org data\n${missing.join('\n')}\n`);
     out(`added ${missing.join(', ')} to .gitignore`);
   }
-  out('next: sfdemo setup, then sfdemo run --dry-run, then sfdemo ui');
+  out('next: sfdemo setup --voice; a demo goes in demos/ (sfdemo narrate, then sfdemo demo), a conversation in scenarios/ (sfdemo run --dry-run)');
   return 0;
 }
 

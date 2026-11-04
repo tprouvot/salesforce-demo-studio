@@ -183,3 +183,29 @@ test('an invalid sfdemo.config.json stops every command that reads it, naming th
   fs.mkdirSync(nested, { recursive: true });
   assert.match(sfdemo(nested, 'baseline').err, /sfdemo\.config\.json: /, 'found from a sub-folder');
 });
+
+test('demos on the command line: the speaker notes, the voice-over plan, the voices, and a demo file given as is', async () => {
+  const { installFakePiper } = await import('./helpers/fake-piper.js');
+  const piper = installFakePiper();
+  try {
+    const cwd = fresh('demo-cli');
+    sfdemo(cwd, 'init', '--example', 'none');
+    assert.ok(fs.existsSync(path.join(cwd, 'demos', 'slides')), 'init makes the demos folder');
+    fs.writeFileSync(path.join(cwd, 'demos', 'intro.md'), '---\ntype: demo\ntitle: Intro\n---\n# Welcome\n- slide: 1\n\nHello and welcome.\n\n# Close\n- slide: 2\n\nThank you.\n');
+    const env = { ...process.env, AFREC_HOME: home, SFDEMO_PIPER: process.env.SFDEMO_PIPER, SFDEMO_VOICES: process.env.SFDEMO_VOICES, SFDEMO_FAKE_PIPER_LOG: process.env.SFDEMO_FAKE_PIPER_LOG };
+    const run = (...args) => { const r = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8', env, timeout: 60000 }); return { code: r.status, out: r.stdout, err: r.stderr }; };
+    const notes = run('notes', 'demos/intro.md');
+    assert.equal(notes.out, '--- slide 1\nHello and welcome.\n\n--- slide 2\nThank you.\n\n');
+    const plan = run('narrate', 'demos/intro.md');
+    assert.equal(plan.code, 0, plan.err);
+    assert.match(plan.out, /intro: 2 chapter\(s\), voice en_US-ryan-high\n {3}1\. Welcome: slides, \d+ s of voice-over\n {3}2\. Close: slides/);
+    assert.match(plan.out, /2 spoken paragraph\(s\)/);
+    assert.match(plan.out, /slide image\(s\) still to export: 1, 2/);
+    assert.match(run('voices', '--installed').out, /^en_US-ryan-high +en_US/m);
+    const missing = run('demos/intro.md');
+    assert.equal(missing.code, 2, 'a demo file given as is is played as a demo');
+    assert.match(missing.err, /no image for slide\(s\) 1, 2 in .*demos\/slides: export the deck's slides there first/);
+    const bad = run('narrate', path.join(cwd, 'demos', 'nope.md'));
+    assert.equal(bad.code, 2);
+  } finally { piper.restore(); }
+});

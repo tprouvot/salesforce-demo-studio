@@ -19,3 +19,7 @@ export { doctorCheck, describeDoctor } from './doctor/doctor.js';
 export { writeHealBundle } from './doctor/bundle.js';
 export { listFixtures, testFixture, fixtureFromDoctor } from './doctor/fixtures.js';
 export { startServer } from './ui/server.js';
+export { parseDemo, readDemo, speakerNotes } from './demo/script.js';
+export { narrate, synthesize, catalogue, downloadVoice, installedVoices } from './demo/voice.js';
+export { recordDemo, recordChapter } from './demo/recorder.js';
+export { assembleDemo } from './demo/assemble.js';
