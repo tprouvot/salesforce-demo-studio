@@ -4,3 +4,5 @@ node_modules/
 .local/
 .sfdemo/
 .afrec/
+# slide images exported from a deck: they can carry a company template
+examples/*/slides/

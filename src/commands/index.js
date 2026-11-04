@@ -21,13 +21,22 @@ import { writeRunReport } from '../engine/report.js';
 import { listOrgs } from '../engine/salesforce.js';
 import { ffmpegBinary } from '../engine/media.js';
 import { loadDenylist } from '../denylist.js';
+import { DEMO_COMMANDS, setupVoice } from './demo.js';
+import { isDemoText } from '../demo/script.js';
 
 const require = createRequire(import.meta.url);
 const VERSION = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8')).version;
 
-const HELP = `sfdemo ${VERSION}: records scripted Agentforce conversations (screenshots, MP4, GIF, transcript). No AI at run time.
+const HELP = `sfdemo ${VERSION}: records Salesforce demos (slides, a voice-over, live Lightning, Setup, Experience Cloud and
+Agentforce steps) into one video, and Agentforce conversations on their own. No AI needed at record time.
 
 Usage: sfdemo <command> [options]
+
+  demo <demo.md>          a whole demo: voice-over, live recording, video with chapters and subtitles
+        --org <alias>  --only <chapter,...>  --retake  --video-only (assemble again)  --no-video  --headed
+  narrate <demo.md>       the voice-over alone: every line read, the length of each chapter
+  voices [--language fr]  Piper's voices; --download <voice>, --try <voice> [--text "..."] [--play], --installed
+  notes <demo.md>         what to put in each slide's speaker notes (--json)
 
   run [files|folders]     record conversations (default: the project's scenarios folder)
         --dry-run  --parallel <n>  --out <dir>  --only <name,...>  --headed
@@ -47,7 +56,7 @@ Usage: sfdemo <command> [options]
   fixtures test [dirs] [--pack file] | add <doctor-dir> --name <name> [--to dir]
   baseline set <run|latest> | clear | show
   compare <run|latest> [--with <run>] [--write]
-  setup [--check]         install and check Chromium, ffmpeg, the sf CLI
+  setup [--check]         install and check Chromium, ffmpeg, the sf CLI; --voice: Piper and a voice too
   init [--org <alias>] [--example ebike|none] [--force]
   orgs                    the orgs the sf CLI knows
 
@@ -294,7 +303,7 @@ async function compare(argv) {
 const runCmd = (bin, args) => new Promise(resolve => execFile(bin, args, { timeout: 60000, shell: process.platform === 'win32' }, (e, stdout, stderr) => resolve({ ok: !e, text: String(stdout || stderr || '').trim() })));
 
 async function setup(argv) {
-  const args = parseArgs(argv, { check: 'boolean' });
+  const args = parseArgs(argv, { check: 'boolean', voice: 'boolean' });
   let ok = true;
   const line = (good, name, detail) => { out(`${good ? '✓' : '✗'} ${name}: ${detail}`); if (!good) ok = false; };
   const major = Number(process.versions.node.split('.')[0]);
@@ -317,6 +326,7 @@ async function setup(argv) {
   if (sf.ok) {
     try { const orgs = await listOrgs(); out(`  ${orgs.length} org(s) known to the sf CLI (sfdemo orgs checks their connection)`); } catch { /* listing is a bonus */ }
   }
+  await setupVoice({ install: args.voice && !args.check, line: (good, name, detail) => (args.voice || good ? line(good, name, detail) : out(`· ${name}: ${detail} (only for narrated demos)`)) });
   return ok ? 0 : 1;
 }
 
@@ -359,7 +369,7 @@ async function orgs() {
   return 0;
 }
 
-const COMMANDS = { run, new: newScenario, ui, doctor, heal, selectors, fixtures, baseline, compare, setup, init, orgs };
+const COMMANDS = { run, new: newScenario, ui, doctor, heal, selectors, fixtures, baseline, compare, setup, init, orgs, ...DEMO_COMMANDS };
 
 export async function main(argv) {
   const [command, ...rest] = argv;
@@ -367,6 +377,7 @@ export async function main(argv) {
   if (command === '--version' || command === '-v') { out(VERSION); return 0; }
   if (rest.includes('--help') || rest.includes('-h')) { out(HELP); return 0; }
   if (COMMANDS[command]) return COMMANDS[command](rest);
+  if (/\.md$/i.test(command) && fs.existsSync(command) && fs.statSync(command).isFile() && isDemoText(fs.readFileSync(command, 'utf8'))) return COMMANDS.demo(argv); // sfdemo my-demo.md
   if (/\.(md|csv)$/i.test(command) || fs.existsSync(command)) return run(argv); // sfdemo scenarios/ == sfdemo run scenarios/
   err(`unknown command "${command}" (sfdemo --help)`);
   return 2;

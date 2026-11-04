@@ -1,0 +1,12 @@
+{
+  "Admin | open the External Credential named Demo ERP Credential": {
+    "steps": [
+      {
+        "type": "click",
+        "label": "Demo ERP Credential"
+      }
+    ],
+    "page": "/lightning/setup/NamedCredential/home",
+    "at": "2026-11-04T21:35:11.641Z"
+  }
+}

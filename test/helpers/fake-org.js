@@ -148,6 +148,54 @@ const siteLogin = error => `<!doctype html>
 </form>
 </body></html>`;
 
+/** Setup: Quick Find filters the menu; a Named Credential page with a small form, and a list. */
+const setupPage = body => `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Setup</title><style>${STYLE} nav a { display: block; } .hidden { display: none; }</style></head>
+<body>
+<nav><input placeholder="Quick Find" aria-label="Quick Find" id="qf">
+  <a class="hidden" href="/lightning/setup/NamedCredential/home">Named Credentials</a>
+  <a class="hidden" href="/lightning/setup/CustomSettings/home">Custom Settings</a></nav>
+<main>${body}</main>
+<script>document.getElementById('qf').addEventListener('input', e => { for (const a of document.querySelectorAll('nav a')) a.classList.toggle('hidden', !e.target.value || !a.textContent.toLowerCase().includes(e.target.value.toLowerCase())); });</script>
+</body></html>`;
+
+const SETUP = {
+  '/lightning/setup/SetupOneHome/home': '<h1>Setup Home</h1>',
+  '/lightning/setup/NamedCredential/home': '<h1>Named Credentials</h1><a href="/lightning/setup/NamedCredential/view">Demo ERP API</a> <a href="#">Object Manager</a>',
+  '/lightning/setup/NamedCredential/view': `<h1>Demo ERP API</h1>
+    <p>Allow Formulas in HTTP Header</p>
+    <label>Label <input id="label" value="Demo ERP API"></label>
+    <label>Status <select id="status"><option>Draft</option><option>Active</option></select></label>
+    <button type="button" onclick="document.getElementById('saved').hidden = false">Save</button>
+    <p id="saved" hidden>Saved</p>
+    <div style="height:1600px"></div><p id="bottom">Custom Headers</p>`,
+};
+
+/** The Developer Console, as far as the Apex step goes: a class editor holding the focus, and Execute Anonymous. */
+const devConsole = () => `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Developer Console</title><style>.x-window { border: 1px solid #999; padding: 8px; } .menu { display: none; }</style></head>
+<body>
+<span id="debug">Debug</span>
+<div class="menu" id="menu"><span id="open">Open Execute Anonymous Window</span></div>
+<div class="CodeMirror" id="classEditor"><textarea id="classText">public class AuditTrail {}</textarea></div>
+<div id="log"></div>
+<script>
+  document.getElementById('classText').focus();
+  document.getElementById('debug').onclick = () => { document.getElementById('menu').style.display = 'block'; };
+  document.getElementById('open').onclick = () => {
+    const w = document.createElement('div');
+    w.className = 'x-window';
+    w.innerHTML = '<div class="x-window-header-text">Enter Apex Code</div><div class="CodeMirror"><textarea id="anon"></textarea></div><input type="checkbox" id="openLog"><span>Open Log</span> <span id="execute">Execute</span>';
+    document.body.appendChild(w);
+    w.querySelector('.CodeMirror').onclick = () => document.getElementById('anon').focus();
+    w.querySelector('#execute').onclick = () => {
+      document.getElementById('log').innerHTML = '<label><input type="checkbox" id="debugOnly">Debug Only</label><pre id="lines">USER_DEBUG|' + document.getElementById('anon').value.replace(/</g, '&lt;') + '</pre>';
+      w.remove();
+    };
+  };
+</script>
+</body></html>`;
+
 const readForm = req => new Promise(resolve => {
   let body = '';
   req.on('data', c => { body += c; });
@@ -190,6 +238,7 @@ export async function startFakeOrg(options = {}) {
       if (!options.users || options.users[un] !== pw) return send(200, loginPage('Please check your username and password.'));
       return send(302, '', { Location: '/lightning/page/home', 'Set-Cookie': ['sid=PASSWORD; Path=/', `uid=005000000000002AAA; Path=/`] });
     }
+    if (url.pathname === '/_ui/common/apex/debug/ApexCSIPage') return send(200, devConsole());
     if (url.pathname.startsWith('/_ui/')) return send(200, '<!doctype html><title>Verify</title><p>Check your email.</p><input id="emc">');
     if (url.pathname === '/servlet/servlet.su') {
       if (options.refuseLoginAs) return send(200, '<!doctype html><h1>Insufficient Privileges</h1><p>You do not have the level of access necessary to perform the operation you requested.</p>');
@@ -198,6 +247,7 @@ export async function startFakeOrg(options = {}) {
     }
     if (url.pathname.startsWith('/lightning/')) {
       if (!jar.sid) return send(302, '', { Location: '/' }); // not signed in: the recording context must carry the session
+      if (SETUP[url.pathname]) return send(200, setupPage(SETUP[url.pathname]));
       return send(200, lightningPage({ uid: jar.uid || ADMIN_ID, banner: options.banner, history: options.history || [] }));
     }
     return send(404, 'not found');
