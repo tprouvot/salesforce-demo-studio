@@ -79,9 +79,9 @@ test('users: by full username, full name, or the part before the @; none or seve
   await assert.rejects(findUser('acme', 'many'), /"many" matches 2 users in acme \(jordan@acme\.example, many@other\.example\): give the full username/);
 });
 
-// In a SOQL string, \_ and \% are LIKE's literal _ and %, and \\ is a backslash. findUser escapes the wildcards, then
-// soqlString escapes that backslash again: 'fleet\\_manager@%' looks for a backslash, so fleet_manager@... never matches.
-test('users: an underscore or a percent sign in the part before the @ is matched literally', { skip, todo: 'findUser double-escapes: the LIKE gets \\\\_ instead of \\_' }, async () => {
+// In a SOQL string, \_ and \% are LIKE's literal _ and %, and \\ is a backslash: a doubled backslash ('fleet\\_manager@%')
+// would look for a backslash, and fleet_manager@... would never match (a bug fixed in November 2026).
+test('users: an underscore or a percent sign in the part before the @ is matched literally', { skip }, async () => {
   fake.setRules([{ match: 'FROM User', result: { records: [{ Id: '0054', Username: 'fleet_manager@acme.example', Name: 'Fleet Manager' }] } }]);
   await findUser('acme', 'fleet_manager');
   assert.match(lastQuery(), /AND Username LIKE 'fleet\\_manager@%'$/);

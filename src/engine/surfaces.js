@@ -220,7 +220,8 @@ export class Lightning extends Surface {
     if (!clear) return false;
     await clear.locator.click();
     await sleep(1500);
-    const confirm = await findVisible([this.page], this.c('confirm'), { timeout: 3000 });
+    // the most recent match: the dialog comes after the panel, whose own "Clear history" button matches too
+    const confirm = await findVisible([this.page], this.c('confirm'), { timeout: 3000, last: true });
     if (confirm) await confirm.locator.click();
     const end = Date.now() + 15000;
     while (Date.now() < end && (await this.read()).messages.some(m => m.role === 'user')) await sleep(1000);

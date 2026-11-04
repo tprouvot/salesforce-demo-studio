@@ -73,11 +73,14 @@ export async function listOrgs({ check = false } = {}) {
 
 export const soqlString = v => `'${String(v).replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
+/** A LIKE pattern matching `v` literally, then `suffix` (wildcards allowed): \_ and \% are LIKE's own escapes. */
+const likeString = (v, suffix) => soqlString(v).slice(0, -1).replace(/[%_]/g, '\\$&') + suffix + "'";
+
 /** The active user matching a full username, the part before the @, or a full name. */
 export async function findUser(alias, key) {
   const where = key.includes('@') ? `Username = ${soqlString(key)}`
     : /\s/.test(key) ? `Name = ${soqlString(key)}`
-      : `Username LIKE ${soqlString(key.replace(/[%_]/g, '\\$&') + '@%')}`;
+      : `Username LIKE ${likeString(key, '@%')}`;
   const rows = await query(alias, `SELECT Id, Username, Name, ContactId FROM User WHERE IsActive = true AND ${where}`);
   if (!rows.length) throw new Error(`no active user "${key}" in ${alias}`);
   if (rows.length > 1) throw new Error(`"${key}" matches ${rows.length} users in ${alias} (${rows.map(r => r.Username).join(', ')}): give the full username`);

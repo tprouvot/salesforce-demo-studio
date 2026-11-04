@@ -108,8 +108,8 @@ test('Lightning: the header button opens the panel, a reply is read, and a butto
 
 // The pack's `confirm` candidate, ^(Clear|Clear History|...)$, also matches the panel's own "Clear history" button
 // (aria-label "Clear history" in the Winter '27 snapshot), which comes before the confirmation modal in the page:
-// reset() clicks "Clear history" again instead of the modal's "Clear", and the chat is never cleared.
-test('Lightning: a chat a previous visit left open is cleared, through the confirmation', { skip, todo: 'reset() re-clicks "Clear history": surfaces.js looks for confirm with the first match, not the modal' }, async () => {
+// reset() takes the most recent match, the modal's (it used to click "Clear history" again, and nothing was cleared).
+test('Lightning: a chat a previous visit left open is cleared, through the confirmation', { skip }, async () => {
   org.options.history = [['Old question', 'Old answer']];
   const { context, page } = await lightningPage();
   try {
