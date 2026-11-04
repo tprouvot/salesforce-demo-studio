@@ -25,11 +25,18 @@ import { doctorCheck } from '../doctor/doctor.js';
 import { writeHealBundle } from '../doctor/bundle.js';
 import { packStatus, updatePacks, promote } from '../selectors/manage.js';
 import { loadDenylist } from '../denylist.js';
+import YAML from 'yaml';
+import { readDemo, parseDemo, speakerNotes, lengthScale } from '../demo/script.js';
+import { narrate, catalogue, installedVoices, synthesize } from '../demo/voice.js';
+import { recordDemo, isLive, bestTake } from '../demo/recorder.js';
+import { assembleDemo, missingSlides } from '../demo/assemble.js';
+import { demoPaths, describeDemo } from '../commands/demo.js';
 
 const PUBLIC = path.join(PACKAGE_ROOT, 'src', 'ui', 'public');
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json',
   '.png': 'image/png', '.gif': 'image/gif', '.mp4': 'video/mp4', '.webm': 'video/webm', '.md': 'text/plain; charset=utf-8', '.yml': 'text/plain; charset=utf-8',
+  '.wav': 'audio/wav', '.vtt': 'text/vtt; charset=utf-8', '.srt': 'text/plain; charset=utf-8',
 };
 const VERSION = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8')).version;
 
@@ -143,9 +150,105 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
     return { id: active.id };
   };
 
+  // ---- demos ----
+
+  const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+  const demoFiles = () => (fs.existsSync(project.demosDir) ? fs.readdirSync(project.demosDir).filter(f => /\.md$/i.test(f)).sort() : []);
+  const runsUrl = (name, file) => `/runs/${encodeURIComponent(name)}/${encodeURIComponent(file)}`;
+  const demoSummary = file => {
+    try {
+      const demo = readDemo(inside(project.demosDir, file));
+      const { out } = demoPaths(project, demo);
+      const has = f => fs.existsSync(path.join(out, f));
+      return { file, name: demo.name, title: String(demo.settings.title || demo.name), voice: demo.settings.voice, chapters: demo.chapters.length, live: demo.chapters.filter(isLive).length,
+        video: has(`${demo.name}.mp4`) ? runsUrl(demo.name, `${demo.name}.mp4`) : null, subtitles: has(`${demo.name}.vtt`) ? runsUrl(demo.name, `${demo.name}.vtt`) : null, errors: [] };
+    } catch (e) { return { file, name: path.parse(file).name, title: path.parse(file).name, errors: [e.message] }; }
+  };
+  const demoDetails = file => {
+    const full = inside(project.demosDir, file);
+    const text = fs.readFileSync(full, 'utf8');
+    let demo;
+    try { demo = readDemo(full); } catch (e) { return { file, text, errors: [e.message] }; }
+    const paths = demoPaths(project, demo);
+    return {
+      file, text, errors: [], summary: demoSummary(file),
+      settings: { title: demo.settings.title || demo.name, voice: demo.settings.voice, pace: demo.settings.pace || 'presenter', slides: path.relative(project.dir, paths.slidesDir) },
+      chapters: demo.chapters.map((c, i) => {
+        const take = isLive(c) ? bestTake(paths.out, i + 1) : null;
+        return { n: i + 1, title: c.title, live: isLive(c), windows: [...new Set(c.steps.filter(s => s.type === 'window').map(s => s.name))], lines: c.steps.filter(s => s.type === 'say').map(s => s.text),
+          take: take && { take: take.take, failed: take.failed, reason: take.reason } };
+      }),
+      notes: speakerNotes(demo), missing: missingSlides(demo, paths.slidesDir), assembly: readJson(path.join(paths.out, 'assembly.json')),
+    };
+  };
+  /** The front matter of `text` with `changes` applied (comments and the rest of the file kept). */
+  const withSettings = (text, changes) => {
+    const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(\r?\n|$)/);
+    const doc = YAML.parseDocument(fm ? fm[1] : '');
+    for (const [k, v] of Object.entries(changes)) if (v !== undefined && v !== null && v !== '') doc.set(k, v);
+    return `---\n${doc.toString().trimEnd()}\n---\n${fm ? text.slice(fm[0].length) : text}`;
+  };
+  const startDemo = body => {
+    if (active && active.status === 'running') throw Object.assign(new Error(`a ${active.kind} is already running`), { status: 409 });
+    const demo = readDemo(inside(project.demosDir, body.file), { org: body.org || undefined });
+    const paths = demoPaths(project, demo);
+    const missing = missingSlides(demo, paths.slidesDir);
+    if (missing.length) throw Object.assign(new Error(`no image for slide(s) ${missing.join(', ')} in ${paths.slidesDir}: export the deck's slides there first`), { status: 400 });
+    const broker = new InputBroker();
+    active = { id: crypto.randomUUID(), kind: 'demo', status: 'running', events: [], broker };
+    const run = active;
+    broker.on('request', req => broadcast({ type: 'input-request', ...req }));
+    broker.on('resolved', r => broadcast({ type: 'input-resolved', ...r }));
+    broadcast({ type: 'demo-start', file: body.file, chapters: demo.chapters.map((c, i) => ({ name: `${i + 1}. ${c.title}`, live: isLive(c), skipped: !!body.only && Number(body.only) !== i + 1 })) });
+    (async () => {
+      broadcast({ type: 'log', message: `voice-over (${demo.settings.voice})...` });
+      const narration = await narrate(demo, { cacheDir: paths.cacheDir });
+      if (!body.videoOnly) await recordDemo(demo, { out: paths.out, stock: narration.stock, stateDir: paths.stateDir, only: body.only ? [Number(body.only)] : [], retake: !!body.retake, emit: broadcast, broker, aiCacheFile: paths.aiCache });
+      const video = await assembleDemo(demo, { out: paths.out, slidesDir: paths.slidesDir, emit: broadcast });
+      run.status = 'done';
+      broadcast({ type: 'done', kind: 'demo', file: body.file, video: runsUrl(demo.name, path.basename(video.mp4)), seconds: Math.round(video.duration) });
+    })().catch(e => { run.status = 'failed'; broadcast({ type: 'done', kind: 'demo', file: body.file, error: e.message }); });
+    return { id: active.id };
+  };
+
   const routes = {
+    'GET /api/demos': () => demoFiles().map(demoSummary),
+    'GET /api/demo': (req, url) => demoDetails(url.searchParams.get('file')),
+    'PUT /api/demo': (req, url, body) => {
+      const file = inside(project.demosDir, body.file);
+      if (!/\.md$/i.test(file)) throw Object.assign(new Error('a demo script ends with .md'), { status: 400 });
+      try { parseDemo(String(body.text || ''), file); } catch (e) { throw Object.assign(new Error(e.message), { status: 400 }); } // a script that does not read is not saved
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, String(body.text || ''));
+      return demoDetails(path.relative(project.demosDir, file));
+    },
+    'POST /api/demo/settings': (req, url, body) => {
+      const file = inside(project.demosDir, body.file);
+      const text = withSettings(fs.readFileSync(file, 'utf8'), { voice: body.voice, pace: body.pace });
+      try { parseDemo(text, file); } catch (e) { throw Object.assign(new Error(e.message), { status: 400 }); }
+      fs.writeFileSync(file, text);
+      return demoDetails(path.relative(project.demosDir, file));
+    },
+    'GET /api/voices': async () => {
+      const installed = new Set(installedVoices().map(v => v.key));
+      let list;
+      try { list = await catalogue(); } catch { list = installedVoices().map(v => ({ key: v.key, language: v.language, languageName: v.language, country: '', quality: '', sizeBytes: null })); }
+      return list.map(v => ({ key: v.key, language: v.language, languageName: v.languageName, country: v.country, quality: v.quality, sizeBytes: v.sizeBytes, installed: installed.has(v.key) }));
+    },
+    'POST /api/voice/try': async (req, url, body) => {
+      if (!/^[A-Za-z]{2,3}_[A-Za-z]{2}-[\w]+-[a-z_]+$/.test(String(body.voice || ''))) throw Object.assign(new Error('not a voice name'), { status: 400 });
+      const r = await synthesize({ text: String(body.text || 'Hello, this is how I sound when I present your demo.').slice(0, 400), voice: body.voice, lengthScale: lengthScale(body.pace || 'presenter'), cacheDir: path.join(project.stateDir, 'narration') });
+      return { url: `/voice-samples/${path.basename(r.wav)}`, seconds: r.duration };
+    },
+    'POST /api/demo/narrate': async (req, url, body) => {
+      const demo = readDemo(inside(project.demosDir, body.file));
+      const paths = demoPaths(project, demo);
+      const r = await narrate(demo, { cacheDir: paths.cacheDir });
+      return { plan: describeDemo(demo), seconds: r.seconds, lines: r.lines, missing: missingSlides(demo, paths.slidesDir) };
+    },
+    'POST /api/demo/record': (req, url, body) => startDemo(body),
     'GET /api/state': () => ({
-      version: VERSION, project: { dir: project.dir, hasConfig: !!project.file, config: project.config, scenarios: path.relative(project.dir, project.scenariosDir), recordings: path.relative(project.dir, project.recordingsDir) },
+      version: VERSION, project: { dir: project.dir, hasConfig: !!project.file, config: project.config, scenarios: path.relative(project.dir, project.scenariosDir), demos: path.relative(project.dir, project.demosDir), recordings: path.relative(project.dir, project.recordingsDir) },
       packs: packStatus(project), active: active && { id: active.id, kind: active.kind, status: active.status, pending: active.broker ? active.broker.pending() : [] },
     }),
     'GET /api/orgs': async () => {
@@ -232,6 +335,11 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
         const file = inside(PUBLIC, url.pathname.slice('/static/'.length));
         if (!fs.existsSync(file)) return send(404, 'not found');
         return send(200, fs.readFileSync(file), { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream' });
+      }
+      if (url.pathname.startsWith('/voice-samples/')) {
+        const file = inside(path.join(project.stateDir, 'narration'), decodeURIComponent(url.pathname.slice('/voice-samples/'.length)));
+        if (!/\.wav$/.test(file) || !fs.existsSync(file)) return send(404, 'not found');
+        return serveFile(req, res, file);
       }
       if (url.pathname.startsWith('/runs/')) {
         const file = inside(project.recordingsDir, decodeURIComponent(url.pathname.slice('/runs/'.length)));

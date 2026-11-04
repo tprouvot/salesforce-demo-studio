@@ -7,12 +7,16 @@ import http from 'node:http';
 import { startServer } from '../src/ui/server.js';
 import { loadProject } from '../src/config.js';
 import { makeRun, result } from './helpers/runs.js';
+import { installFakePiper } from './helpers/fake-piper.js';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-ui-'));
 fs.mkdirSync(path.join(dir, 'scenarios'));
 fs.writeFileSync(path.join(dir, 'sfdemo.config.json'), JSON.stringify({ scenarios: 'scenarios', recordings: '.local/recordings' }));
 fs.writeFileSync(path.join(dir, 'scenarios', 'guest.md'), '---\nsite: https://x.example.com/\n---\n1. Hi\n');
 fs.writeFileSync(path.join(dir, 'creds.txt'), 'rider@x.example s3cret  (rider)\n');
+fs.mkdirSync(path.join(dir, 'demos'));
+fs.writeFileSync(path.join(dir, 'demos', 'tour.md'), '---\ntype: demo\ntitle: The tour\nvoice: en_US-ryan-high  # the narrator\nwindows:\n  Web: { url: https://example.com }\n---\n# Welcome\n- slide: 1\n\nHello and welcome.\n\n# Live\n- window: Web\n- click: More information\n\nOn the page.\n');
+fs.writeFileSync(path.join(dir, 'demos', 'broken.md'), '---\ntype: demo\npace: sleepy\n---\nHi.\n');
 const recordings = path.join(dir, '.local', 'recordings');
 makeRun(recordings, '20261020-100000', [result('Guest', ['Rides cost $4 an hour.'])]);
 makeRun(recordings, '20261026-100000', [result('Guest', ['Rides cost $5 an hour.'], { status: 'flagged', flags: ['1: x'] }), result('Rider', [], { status: 'failed', error: 'x' })], '2026-10-26T10:00:00.000Z');
@@ -177,4 +181,50 @@ test('the event stream says hello with what is running', async () => {
   const { value } = await reader.read();
   assert.equal(new TextDecoder().decode(value), 'data: {"type":"hello","active":null}\n\n');
   controller.abort();
+});
+
+test('demos: the list, one demo with its chapters, notes and missing slides, and a script that does not read is not saved', async () => {
+  const list = await (await get('/api/demos')).json();
+  assert.deepEqual(list.map(d => [d.file, d.title, d.chapters, d.live, d.errors.length]), [['broken.md', 'broken', undefined, undefined, 1], ['tour.md', 'The tour', 2, 1, 0]]);
+  assert.match(list[0].errors[0], /pace: "sleepy" is not a pace/);
+  const one = await (await get('/api/demo?file=tour.md')).json();
+  assert.deepEqual(one.chapters.map(c => [c.n, c.title, c.live, c.windows, c.lines, c.take]), [[1, 'Welcome', false, [], ['Hello and welcome.'], null], [2, 'Live', true, ['Web'], ['On the page.'], null]]);
+  assert.deepEqual(one.notes, [{ slide: 1, notes: 'Hello and welcome.\n\n▶ Switch to Web\n\n▶ Click “More information”\n\nOn the page.' }]);
+  assert.deepEqual(one.missing, [1]);
+  assert.equal(one.settings.voice, 'en_US-ryan-high');
+  assert.equal((await get('/api/demo?file=../sfdemo.config.json')).status, 400);
+  const bad = await send('PUT', '/api/demo', { file: 'tour.md', text: '---\ntype: demo\nvoise: x\n---\nHi.\n' });
+  assert.equal(bad.status, 400);
+  assert.match((await bad.json()).error, /unknown setting "voise"/);
+  assert.match(fs.readFileSync(path.join(dir, 'demos', 'tour.md'), 'utf8'), /title: The tour/, 'the file is unchanged');
+  assert.equal((await send('PUT', '/api/demo', { file: 'notes.txt', text: 'Hi.' })).status, 400);
+  const saved = await (await send('PUT', '/api/demo', { file: 'new.md', text: '---\ntype: demo\n---\n# One\nHi there.\n' })).json();
+  assert.equal(saved.chapters[0].title, 'One');
+});
+
+test('demos: the voice and pace are set in the front matter (its comments kept), a sentence is heard, the plan is read', async () => {
+  const piper = installFakePiper(['en_US-ryan-high', 'fr_FR-siwis-low']);
+  try {
+    const changed = await (await send('POST', '/api/demo/settings', { file: 'tour.md', voice: 'fr_FR-siwis-low', pace: 'normal' })).json();
+    assert.deepEqual([changed.settings.voice, changed.settings.pace], ['fr_FR-siwis-low', 'normal']);
+    const text = fs.readFileSync(path.join(dir, 'demos', 'tour.md'), 'utf8');
+    assert.match(text, /voice: fr_FR-siwis-low # the narrator/);
+    assert.match(text, /\n---\n# Welcome\n/, 'the body is untouched');
+    assert.equal((await send('POST', '/api/demo/settings', { file: 'tour.md', pace: 'sleepy' })).status, 400);
+    const sample = await (await send('POST', '/api/voice/try', { voice: 'fr_FR-siwis-low', text: 'Bonjour.' })).json();
+    assert.match(sample.url, /^\/voice-samples\/[0-9a-f]{12}\.wav$/);
+    const wav = await get(sample.url);
+    assert.equal(wav.status, 200);
+    assert.equal(wav.headers.get('content-type'), 'audio/wav');
+    assert.equal(piper.calls().at(-1).text, 'Bonjour.');
+    assert.equal((await send('POST', '/api/voice/try', { voice: '../../etc' })).status, 400);
+    assert.equal((await get('/voice-samples/..%2F..%2Fsfdemo.config.json')).status, 400);
+    const plan = await (await send('POST', '/api/demo/narrate', { file: 'tour.md' })).json();
+    assert.equal(plan.lines, 2);
+    assert.deepEqual(plan.missing, [1]);
+    assert.match(plan.plan[0], /^tour: 2 chapter\(s\), voice fr_FR-siwis-low$/);
+    const record = await send('POST', '/api/demo/record', { file: 'tour.md' });
+    assert.equal(record.status, 400);
+    assert.match((await record.json()).error, /no image for slide\(s\) 1 in .*demos.slides: export the deck's slides there first/);
+  } finally { piper.restore(); }
 });

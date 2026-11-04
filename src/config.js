@@ -20,6 +20,7 @@ export const DEFAULT_PACKS_URL = 'https://raw.githubusercontent.com/tprouvot/sal
 
 const DEFAULTS = {
   scenarios: 'scenarios',
+  demos: 'demos',
   recordings: '.local/recordings',
   defaults: {},
   parallel: 3,
@@ -71,6 +72,7 @@ export function loadProject(options = {}) {
     file,
     config,
     scenariosDir: path.resolve(dir, config.scenarios),
+    demosDir: path.resolve(dir, config.demos),
     recordingsDir: path.resolve(dir, config.recordings),
     stateDir: stateDirOf(dir),
   };

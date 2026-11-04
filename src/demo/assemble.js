@@ -119,6 +119,9 @@ const stamp = s => {
 
 export const toSrt = cues => cues.map((c, i) => `${i + 1}\n${stamp(c.start)} --> ${stamp(c.end)}\n${c.text}\n`).join('\n');
 
+/** The same cues as WebVTT, for the video player of the UI and of web pages. */
+export const toVtt = cues => `WEBVTT\n\n${cues.map(c => `${stamp(c.start).replace(',', '.')} --> ${stamp(c.end).replace(',', '.')}\n${c.text}\n`).join('\n')}`;
+
 /** Encodes one chapter: its pieces over the narration. */
 async function chapterVideo(take, list, file, { size, slidesDir }) {
   const end = takeLength(take);
@@ -198,6 +201,7 @@ export async function assembleDemo(demo, { out, slidesDir, emit = () => {} }) {
   await ffmpeg(['-f', 'concat', '-safe', '0', '-i', listFile, '-i', metaFile, '-map_metadata', '1', '-map_chapters', '1', '-c', 'copy', '-movflags', '+faststart', mp4]);
   const srt = path.join(out, `${demo.name}.srt`);
   fs.writeFileSync(srt, toSrt(cues));
+  fs.writeFileSync(path.join(out, `${demo.name}.vtt`), toVtt(cues));
   const duration = await probeDuration(mp4);
   fs.writeFileSync(path.join(out, 'assembly.json'), JSON.stringify({ mp4, srt, duration, chapters: report, at: new Date().toISOString() }, null, 1));
   return { mp4, srt, duration, chapters: report };

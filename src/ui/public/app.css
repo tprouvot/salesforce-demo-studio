@@ -49,3 +49,11 @@ pre.log { max-height: 360px; }
 .empty { padding: 40px; text-align: center; color: var(--muted); }
 .gap { margin-top: 16px; }
 .field input[type="checkbox"] { width: auto; justify-self: start; }
+.chapter { border-top: 1px solid var(--line); padding: 10px 0; }
+.chapter:first-of-type { border-top: 0; }
+.chapter ul.lines { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+.chapter .err, .card .err { color: var(--bad); }
+.demo-video { width: 100%; border-radius: 8px; background: #000; margin: 8px 0; }
+.note pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; font-size: 12.5px; }
+details.card > summary { cursor: pointer; margin-bottom: 8px; }
+.pill.kept { background: var(--bg); color: var(--muted); }

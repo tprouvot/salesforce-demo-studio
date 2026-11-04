@@ -1,6 +1,6 @@
 /*
- * The sfdemo UI: edit scenarios (form or Markdown), run them with live progress, answer type-from prompts, browse
- * recordings, run the doctor. Everything goes through the local server's /api; text from the org is set as text.
+ * The sfdemo UI: demos (the voice, the chapters, recording, the video, the speaker notes, the script), scenarios
+ * (form or Markdown), runs with live progress, type-from prompts, recordings, the doctor. Everything goes through the local server's /api; text from the org is set as text.
  */
 (function () {
   const { h, renderRun, checkChip } = window.SfdemoRender;
@@ -33,6 +33,9 @@
   function onEvent(e) {
     if (e.type === 'hello') { if (!e.active) return; live.kind = e.active.kind; live.status = e.active.status; return; }
     if (e.type === 'run-start') { live.kind = 'run'; live.status = 'running'; live.done = null; live.log = []; live.convs = new Map(e.conversations.map(c => [c.name, { ...c, status: 'queued', last: '', exchanges: 0 }])); }
+    if (e.type === 'demo-start') { live.kind = 'demo'; live.status = 'running'; live.done = null; live.log = []; live.convs = new Map(e.chapters.map(c => [c.name, { name: c.name, surface: c.live ? 'live' : 'slides', status: c.skipped ? 'kept' : 'queued', last: '', exchanges: 0 }])); }
+    if (e.type === 'chapter-start') { const c = live.convs.get(`${e.chapter}. ${e.title}`); if (c) { c.status = 'running'; c.last = `take ${e.take}`; } }
+    if (e.type === 'chapter-end') { const c = live.convs.get(`${e.chapter}. ${e.title}`); if (c) { c.status = e.failed ? 'failed' : 'recorded'; c.last = e.failed ? e.reason : `take ${e.take} kept`; } }
     if (e.type === 'conversation-start') { const c = live.convs.get(e.conversation); if (c) c.status = 'running'; }
     if (e.type === 'conversation-end') { const c = live.convs.get(e.conversation); if (c) c.status = e.status; }
     if (e.type === 'exchange') { const c = live.convs.get(e.conversation); if (c) c.exchanges++; }
@@ -45,7 +48,7 @@
     if (e.type === 'heal') live.log.push(`[${e.conversation}] healed ${e.elements.join(', ')} (saved to .sfdemo/overrides.json)`);
     if (e.type === 'input-request' && !e.replay) askInput(e);
     if (e.type === 'input-resolved') closeInput(e.id);
-    if (e.type === 'done') { live.status = e.error ? 'failed' : 'done'; live.done = e; if (e.error) live.log.push(`error: ${e.error}`); if (!e.replay) toast(e.kind === 'run' ? (e.error ? 'The run failed' : 'The run is finished') : 'The doctor is finished', e.error ? 'bad' : 'warn'); }
+    if (e.type === 'done') { live.status = e.error ? 'failed' : 'done'; live.done = e; if (e.error) live.log.push(`error: ${e.error}`); if (!e.replay) toast(e.kind === 'run' ? (e.error ? 'The run failed' : 'The run is finished') : e.kind === 'demo' ? (e.error ? 'The demo failed' : 'The video is ready') : 'The doctor is finished', e.error ? 'bad' : 'warn'); }
     if (live.log.length > 3000) live.log.splice(0, live.log.length - 3000);
     status.textContent = live.status === 'running' ? `${live.kind} running…` : '';
     notify();
@@ -60,13 +63,14 @@
       if (!live.kind) { box.replaceChildren(); return; }
       const pre = h('pre', { class: 'log' }, live.log.slice(-400).join('\n'));
       box.replaceChildren(
-        h('div', { class: 'row spread gap' }, h('h2', {}, live.kind === 'run' ? 'Run' : 'Doctor', ' ', h('span', { class: `pill ${live.status === 'running' ? 'running' : live.status === 'failed' ? 'failed' : 'recorded'}` }, live.status || '')),
+        h('div', { class: 'row spread gap' }, h('h2', {}, live.kind === 'run' ? 'Run' : live.kind === 'demo' ? 'Demo' : 'Doctor', ' ', h('span', { class: `pill ${live.status === 'running' ? 'running' : live.status === 'failed' ? 'failed' : 'recorded'}` }, live.status || '')),
           h('div', { class: 'row' },
             live.status === 'running' && live.kind === 'run' ? h('button', { class: 'btn', onclick: guard(() => api('POST', '/api/cancel')) }, 'Cancel') : null,
-            live.done && live.done.kind === 'run' && live.done.id ? h('a', { class: 'btn primary', href: `#/runs/${encodeURIComponent(live.done.id)}` }, 'Open the recordings') : null)),
+            live.done && live.done.kind === 'run' && live.done.id ? h('a', { class: 'btn primary', href: `#/runs/${encodeURIComponent(live.done.id)}` }, 'Open the recordings') : null,
+            live.done && live.done.kind === 'demo' && live.done.video ? h('button', { class: 'btn primary', onclick: () => { location.hash = `#/demos/${encodeURIComponent(live.done.file)}`; route(); } }, 'Watch the video') : null)),
         live.convs.size ? h('div', { class: 'live' }, [...live.convs.values()].map(c => h('div', { class: 'card' },
           h('div', { class: 'row spread' }, h('strong', {}, c.name), h('span', { class: `pill ${c.status}` }, c.status)),
-          h('div', { class: 'muted' }, `${c.surface} · ${c.exchanges} exchange(s)`),
+          h('div', { class: 'muted' }, live.kind === 'demo' ? c.surface : `${c.surface} · ${c.exchanges} exchange(s)`),
           h('div', { class: 'last', title: c.last }, c.last || '…')))) : null,
         pre);
       pre.scrollTop = pre.scrollHeight;
@@ -379,16 +383,112 @@
         r.status !== 'healthy' ? h('button', { class: 'btn gap', onclick: guard(async () => { const x = await api('POST', '/api/heal', { id: r.id }); toast(`Repair bundle: ${x.dir} (give its README.md to your coding agent)`, 'warn'); }) }, 'Write a repair bundle') : null))) : h('div', { class: 'card empty' }, 'No doctor check yet.'));
   }
 
+
+  // ---- Demos ----
+
+  const field = (label, input, help) => h('div', { class: 'field' }, h('label', {}, label), input, help ? h('div', { class: 'help' }, help) : null);
+
+  async function demos(selected) {
+    const root = view;
+    const files = await api('GET', '/api/demos');
+    const list = h('div', { class: 'card files' },
+      h('div', { class: 'row spread pad' }, h('strong', {}, 'Demos'), h('button', { class: 'btn', onclick: guard(newDemo) }, 'New')),
+      files.length ? files.map(f => h('button', { class: `file${f.file === selected ? ' on' : ''}`, onclick: () => { location.hash = `#/demos/${encodeURIComponent(f.file)}`; } },
+        h('div', {}, f.title, ' ', f.errors.length ? h('span', { class: 'pill bad', title: f.errors.join('\n') }, '!') : null, f.video ? h('span', { class: 'pill recorded' }, 'video') : null),
+        h('div', { class: 'names' }, f.errors.length ? f.file : `${f.chapters} chapter(s), ${f.live} live · ${f.voice}`))) : h('div', { class: 'empty' }, 'No demo yet.'));
+    const panel = h('div', {});
+    root.replaceChildren(h('div', { class: 'split' }, list, panel));
+    if (selected) await openDemo(panel, selected);
+    else panel.replaceChildren(h('div', { class: 'card pad' }, h('h1', {}, 'Your demos'),
+      h('p', {}, 'A demo is one script: what the voice says, the slides it says it on, and what happens live in your org. sfdemo reads it with the voice you choose, records the live parts, and makes one video with chapters and subtitles.'),
+      h('p', { class: 'muted' }, 'Ask Claude to write one for you (the salesforce-demo-studio skill), or press New.')), liveBlock());
+  }
+
+  async function newDemo() {
+    const name = prompt('Name of the demo, e.g. product-tour');
+    if (!name) return;
+    const file = /\.md$/i.test(name) ? name : `${name.trim().replace(/[^\w-]+/g, '-')}.md`;
+    const text = `---\ntype: demo\ntitle: ${name.replace(/\.md$/i, '')}\nvoice: en_US-ryan-high\npace: presenter\n---\n\n# Opening\n\nHello, and welcome. Write here what the voice says: one paragraph is one breath.\n`;
+    await api('PUT', '/api/demo', { file, text });
+    location.hash = `#/demos/${encodeURIComponent(file)}`;
+  }
+
+  async function openDemo(panel, file) {
+    const d = await api('GET', `/api/demo?file=${encodeURIComponent(file)}`);
+    const reload = () => { if (panel.isConnected) openDemo(panel, file); };
+    const org = /** @type {HTMLInputElement} */ (h('input', { list: 'demo-orgs', placeholder: 'the org of the script', 'aria-label': 'Org' }));
+    const result = h('div', { class: 'problems' });
+    const record = guard(async body => { await api('POST', '/api/demo/record', { file, org: org.value || undefined, ...body }); toast('Recording: follow it at the bottom of the page'); });
+    const showPlan = r => result.replaceChildren(h('pre', {}, [...r.plan, `${r.lines} spoken paragraph(s), ${Math.round(r.seconds)} s of voice-over in all`, ...(r.missing.length ? [`slide images still to export: ${r.missing.join(', ')}`] : [])].join('\n')));
+    const s = d.summary || {};
+    const header = h('div', { class: 'card pad' },
+      h('div', { class: 'row spread' }, h('h1', {}, d.settings ? d.settings.title : file),
+        h('div', { class: 'row' },
+          h('button', { class: 'btn', disabled: !!d.errors.length, onclick: guard(async () => { toast('Reading every line with the voice...'); showPlan(await api('POST', '/api/demo/narrate', { file })); }) }, 'Prepare the voice-over'),
+          h('button', { class: 'btn primary', disabled: !!d.errors.length, onclick: () => record({}) }, s.video ? 'Record again' : 'Record'),
+          s.video ? h('button', { class: 'btn', onclick: () => record({ videoOnly: true }) }, 'Make the video again') : null)),
+      d.errors.length ? h('div', { class: 'problems' }, d.errors.map(e => h('div', { class: 'err' }, e))) : null,
+      h('div', { class: 'muted' }, 'Recording signs in to the org and does what the script says, nothing else. Chat messages spend agent credits.'),
+      h('div', { class: 'fields gap' }, field('Org (sf alias)', h('span', {}, org, orgList('demo-orgs')), 'empty: the org written in the script')),
+      result);
+    const video = s.video ? h('div', { class: 'card pad' }, h('h2', {}, 'The video'),
+      h('video', { controls: true, preload: 'metadata', src: s.video, class: 'demo-video' }, s.subtitles ? h('track', { kind: 'subtitles', src: s.subtitles, srclang: 'en', label: 'Subtitles', default: true }) : null),
+      d.assembly ? h('div', { class: 'muted' }, d.assembly.chapters.map(c => `${c.chapter}. ${c.title}: ${c.status}`).join(' · ')) : null,
+      h('div', { class: 'row' }, h('a', { class: 'btn', href: s.video, download: '' }, 'Download the MP4'), s.subtitles ? h('a', { class: 'btn', href: s.subtitles.replace(/\.vtt$/, '.srt'), download: '' }, 'Download the subtitles') : null)) : null;
+    const voiceCard = d.settings ? await voicePicker(file, d, reload) : null;
+    const chapters = d.chapters ? h('div', { class: 'card pad' }, h('h2', {}, 'Chapters'),
+      d.chapters.map(c => {
+        const pill = !c.live ? ['recorded', 'slides'] : !c.take ? ['queued', 'not recorded yet'] : c.take.failed ? ['failed', `take ${c.take.take} failed`] : ['recorded', `take ${c.take.take}`];
+        return h('div', { class: 'chapter' },
+          h('div', { class: 'row spread' }, h('strong', {}, `${c.n}. ${c.title}`),
+            h('div', { class: 'row' }, h('span', { class: `pill ${pill[0]}` }, pill[1]), c.live ? h('button', { class: 'btn', onclick: () => record({ only: c.n, retake: true }) }, 'Record this chapter again') : null)),
+          c.live ? h('div', { class: 'muted' }, `live in ${c.windows.join(', ')}`) : null,
+          c.take && c.take.failed ? h('div', { class: 'err' }, c.take.reason) : null,
+          c.lines.length ? h('ul', { class: 'lines' }, c.lines.map(l => h('li', {}, l))) : null);
+      })) : null;
+    const notes = d.notes && d.notes.length ? h('details', { class: 'card pad' }, h('summary', {}, h('strong', {}, `Speaker notes for the deck (${d.notes.length} slide(s))`)),
+      h('p', { class: 'muted' }, 'What each slide\'s speaker notes should say: the narration, then the live part as ▶ cues. The demo-deck skill writes them into Google Slides.'),
+      d.missing.length ? h('div', { class: 'err' }, `Slide images to export into ${d.settings.slides}: ${d.missing.join(', ')}`) : null,
+      d.notes.map(n => h('div', { class: 'note' }, h('strong', {}, `Slide ${n.slide}`), h('pre', {}, n.notes)))) : null;
+    const area = /** @type {HTMLTextAreaElement} */ (h('textarea', { class: 'code', spellcheck: 'false', 'aria-label': 'Demo script' }, d.text));
+    const script = h('details', { class: 'card pad', ...(d.errors.length ? { open: true } : {}) }, h('summary', {}, h('strong', {}, 'Script')),
+      h('p', { class: 'muted' }, 'Paragraphs are spoken, # headings are chapters, list items happen on screen. The format: docs/DEMOS.md.'),
+      area, h('div', { class: 'row gap' }, h('button', { class: 'btn primary', onclick: guard(async () => { await api('PUT', '/api/demo', { file, text: area.value }); toast('Saved'); reload(); }) }, 'Save the script')));
+    panel.replaceChildren(header, video, voiceCard, chapters, notes, script, liveBlock());
+  }
+
+  /** The voice of a demo: a language, its voices, the pace; hear any sentence, then keep the voice. */
+  async function voicePicker(file, d, reload) {
+    const voices = await api('GET', '/api/voices').catch(() => []);
+    const current = d.settings.voice;
+    const names = new Map(voices.map(v => [v.language, `${v.languageName}${v.country ? ` (${v.country})` : ''}`]));
+    const lang = /** @type {HTMLSelectElement} */ (h('select', { 'aria-label': 'Language' }, [...names.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([code, name]) => h('option', { value: code, selected: current.startsWith(code + '-') }, name))));
+    const voice = /** @type {HTMLSelectElement} */ (h('select', { 'aria-label': 'Voice' }));
+    const fill = () => voice.replaceChildren(...voices.filter(v => v.language === lang.value).map(v => h('option', { value: v.key, selected: v.key === current }, `${v.key.split('-').slice(1).join(' · ')}${v.installed ? ' ✓' : v.sizeBytes ? ` (${Math.round(v.sizeBytes / 1e6)} MB to download)` : ''}`)));
+    lang.addEventListener('change', fill);
+    fill();
+    const pace = /** @type {HTMLSelectElement} */ (h('select', { 'aria-label': 'Pace' }, ['slow', 'presenter', 'normal', 'brisk'].map(p => h('option', { value: p, selected: String(d.settings.pace) === p }, p))));
+    const sample = /** @type {HTMLInputElement} */ (h('input', { value: (d.chapters || []).flatMap(c => c.lines)[0] || 'Hello, this is how I sound when I present your demo.', 'aria-label': 'Text to hear' }));
+    const audio = /** @type {HTMLAudioElement} */ (h('audio', { controls: true }));
+    return h('div', { class: 'card pad' }, h('h2', {}, 'Voice'),
+      h('div', { class: 'fields' }, field('Language', lang), field('Voice', voice, '✓ is on this computer already'), field('Pace', pace)),
+      field('Hear it say', sample),
+      h('div', { class: 'row gap' },
+        h('button', { class: 'btn', onclick: guard(async () => { toast('Getting the voice ready (the first time, it downloads)'); const r = await api('POST', '/api/voice/try', { voice: voice.value, pace: pace.value, text: sample.value }); audio.src = r.url; await audio.play().catch(() => {}); }) }, 'Listen'),
+        h('button', { class: 'btn primary', disabled: !voice.value, onclick: guard(async () => { await api('POST', '/api/demo/settings', { file, voice: voice.value, pace: pace.value }); toast(`The demo now uses ${voice.value}`); reload(); }) }, 'Use this voice'),
+        audio));
+  }
+
   // ---- router ----
 
   function route() {
-    const [, name = 'scenarios', arg] = (location.hash || '#/scenarios').match(/^#\/([^/]*)\/?(.*)$/) || [];
+    const [, name = 'demos', arg] = (location.hash || '#/demos').match(/^#\/([^/]*)\/?(.*)$/) || [];
     document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('on', a.getAttribute('data-route') === name));
     live.listeners.clear();
     view = h('div', {});
     main.replaceChildren(view);
-    const views = { scenarios, run, runs, doctor };
-    guard(views[name] || scenarios)(arg ? decodeURIComponent(arg) : undefined);
+    const views = { demos, scenarios, run, runs, doctor };
+    guard(views[name] || demos)(arg ? decodeURIComponent(arg) : undefined);
   }
   window.addEventListener('hashchange', route);
   route();

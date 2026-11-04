@@ -46,3 +46,31 @@ test('report.html renders, escapes org text, and shows the diff', { skip: !hasBr
     assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 });
+
+test('the Demos page: the list, a demo with its voice, chapters, speaker notes and script, without a script error', { skip: !hasBrowser && 'Chromium is not installed' }, async () => {
+  const { startServer } = await import('../src/ui/server.js');
+  const { loadProject } = await import('../src/config.js');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-ui-demos-'));
+  fs.mkdirSync(path.join(dir, 'demos'));
+  fs.writeFileSync(path.join(dir, 'demos', 'tour.md'), '---\ntype: demo\ntitle: The tour\nwindows:\n  Web: { url: https://example.com }\n---\n# Welcome\n- slide: 1\n\nHello and welcome.\n\n# Live\n- window: Web\n- point: Example Domain\n\nOn the page.\n');
+  const server = await startServer({ project: loadProject({ dir }), port: 0 });
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(server.url);
+    await page.click('.files button.file');
+    await page.waitForSelector('.chapter');
+    assert.equal(await page.locator('h1').first().textContent(), 'The tour');
+    assert.deepEqual(await page.locator('.chapter strong').allTextContents(), ['1. Welcome', '2. Live']);
+    assert.match(await page.locator('.chapter').nth(1).textContent(), /not recorded yet.*live in Web/s);
+    assert.equal(await page.getByRole('button', { name: 'Record this chapter again' }).count(), 1, 'only the live chapter can be recorded on its own');
+    assert.match(await page.textContent('details.card'), /Slide images to export into demos.slides: 1/);
+    assert.match(await page.locator('textarea.code').inputValue(), /^---\ntype: demo/);
+    assert.equal(await page.locator('nav.tabs a.on').textContent(), 'Demos', 'demos are the first page');
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); await server.close(); }
+});
