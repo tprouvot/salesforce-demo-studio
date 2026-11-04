@@ -99,4 +99,11 @@ test('a whole demo: slides and a live window over the voice-over, one MP4 at 192
   assert.match(srt, /^1\n00:00:01,200 --> 00:00:\d\d,\d{3}\nThe first slide\.\n/);
   assert.match(srt, /On the live page\./);
   await assert.rejects(assembleDemo(parseDemo('---\ntitle: x\n---\n- slide: 9\nNine.', path.join(dir, 'x.md')), { out, slidesDir: slides }), /no image for slide\(s\) 9/);
+  // a take whose window video is gone: that chapter is left out, the others make the video
+  fs.rmSync(video);
+  const warnings = [];
+  const partial = await assembleDemo(demo, { out, slidesDir: slides, emit: e => { if (e.type === 'warning') warnings.push(e.message); } });
+  assert.deepEqual(partial.chapters.map(c => [c.title, c.status]), [['Slides', 'slides'], ['Live', 'skipped: the video of window Web is missing']]);
+  assert.match(warnings[0], /chapter 2 \(Live\) left out of the video/);
+  assert.ok(Math.abs(partial.duration - takeLength(slideEvents(demo.chapters[0], 0.7))) < 0.6);
 });

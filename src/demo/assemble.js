@@ -133,7 +133,7 @@ async function chapterVideo(take, list, file, { size, slidesDir }) {
       inputs.push('-loop', '1', '-framerate', '30', '-t', dur.toFixed(3), '-i', slideImage(slidesDir, view.slide));
     } else if (view.window) {
       const w = take.windows[view.window];
-      if (!w || !w.video) throw new Error(`the video of window ${view.window} is missing`);
+      if (!w || !w.video || !fs.existsSync(w.video)) throw new Error(`the video of window ${view.window} is missing`);
       inputs.push('-ss', Math.max(0, w.offset + start).toFixed(3), '-t', dur.toFixed(3), '-i', w.video);
     } else {
       inputs.push('-f', 'lavfi', '-t', dur.toFixed(3), '-i', `color=c=#032d60:s=${size.width}x${size.height}:r=30`);
@@ -180,7 +180,13 @@ export async function assembleDemo(demo, { out, slidesDir, emit = () => {} }) {
     if (!list.length) { report.push({ chapter: n, title: chapter.title, status: 'nothing to show: skipped' }); continue; }
     const file = path.join(work, `ch${pad(n)}.mp4`);
     emit({ type: 'log', message: `assembling chapter ${n}: ${chapter.title}` });
-    await chapterVideo(take, list, file, { size, slidesDir });
+    try {
+      await chapterVideo(take, list, file, { size, slidesDir });
+    } catch (e) { // one chapter that cannot be put together (its video lost) does not cost the others
+      report.push({ chapter: n, title: chapter.title, status: `skipped: ${e.message.split('\n')[0]}` });
+      emit({ type: 'warning', message: `chapter ${n} (${chapter.title}) left out of the video: ${e.message.split('\n')[0]}` });
+      continue;
+    }
     const duration = (await probeDuration(file)) || takeLength(take);
     marks.push({ start: at, title: chapter.title });
     for (const c of srtCues(take.events.filter(e => e.kind === 'say').map(e => ({ ...e, start: at + e.t })))) cues.push(c);
