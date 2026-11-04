@@ -349,10 +349,13 @@ async function init(argv) {
     const src = path.join(PACKAGE_ROOT, 'examples', example);
     if (!fs.existsSync(src)) throw new Error(`no example "${example}" (available: ${fs.readdirSync(path.join(PACKAGE_ROOT, 'examples')).join(', ')})`);
     for (const f of fs.readdirSync(src)) {
-      const target = path.join(scenarios, f);
-      if (!fs.existsSync(target) || args.force) fs.copyFileSync(path.join(src, f), target);
+      const from = path.join(src, f);
+      if (!fs.statSync(from).isFile()) continue; // an example's slides/ (exported locally) is not part of it
+      const isDemo = /\.ai-steps\.json$/.test(f) || (/\.md$/i.test(f) && isDemoText(fs.readFileSync(from, 'utf8')));
+      const target = path.join(isDemo ? path.join(dir, 'demos') : scenarios, f);
+      if (!fs.existsSync(target) || args.force) fs.copyFileSync(from, target);
     }
-    out(`copied the ${example} example scenarios to scenarios/ (edit org:, site: and user: to match your org)`);
+    out(`copied the ${example} example (demos to demos/, conversations to scenarios/): edit org:, site: and user: to match your org`);
   }
   const gitignore = path.join(dir, '.gitignore');
   const current = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : '';

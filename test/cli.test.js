@@ -67,7 +67,7 @@ test('help, version, an unknown command or option: exit codes and messages', () 
   const cwd = fresh('help');
   const help = sfdemo(cwd, '--help');
   assert.equal(help.code, 0);
-  assert.match(help.out, new RegExp(`^sfdemo ${VERSION.replace(/\./g, '\\.')}: records scripted Agentforce conversations`));
+  assert.match(help.out, new RegExp(`^sfdemo ${VERSION.replace(/\./g, '\\.')}: records Salesforce demos`));
   assert.match(help.out, /Usage: sfdemo <command> \[options\]/);
   assert.equal(sfdemo(cwd).code, 0, 'no command prints the help');
   assert.match(sfdemo(cwd, 'doctor', '-h').out, /Usage: sfdemo/);
@@ -102,7 +102,11 @@ test('init: the config, the example scenarios, the .gitignore entries; never twi
   assert.equal(sfdemo(none, 'init', '--example', 'none').code, 0);
   assert.deepEqual(fs.readdirSync(path.join(none, 'scenarios')), []);
   const bad = sfdemo(fresh('init-bad'), 'init', '--example', 'pizza');
-  assert.match(bad.err, /no example "pizza" \(available: ebike\)/);
+  assert.match(bad.err, /no example "pizza" \(available: apex-callout-tour, ebike\)/);
+  const tour = fresh('init-tour');
+  assert.equal(sfdemo(tour, 'init', '--example', 'apex-callout-tour').code, 0);
+  assert.deepEqual(fs.readdirSync(path.join(tour, 'demos')).filter(f => f !== 'slides').sort(), ['apex-callout-tour.ai-steps.json', 'apex-callout-tour.md'], 'a demo goes to demos/');
+  assert.deepEqual(fs.readdirSync(path.join(tour, 'scenarios')), []);
 });
 
 test('run --dry-run: the plan, from the scenarios folder or the shorthand; --only and errors exit 2', () => {

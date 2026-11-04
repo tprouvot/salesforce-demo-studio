@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { parseDemo, readDemo, speakerNotes, isDemoText, lengthScale, cue } from '../src/demo/script.js';
 
 const demo = (body, front = 'org: myOrg\nwindows:\n  Admin: { path: /lightning/setup/SetupOneHome/home, label: "Admin · Setup" }\n  Visitor: { site: https://riders.example.com/s/ }') => parseDemo(`---\n${front}\n---\n${body}`, '/demos/tour.md');
@@ -116,7 +117,7 @@ test('a demo is told from a conversation by its front matter; the sample tour re
   assert.equal(isDemoText('---\nvoice: en_US-ryan-high\n---\n1. Hi'), true);
   assert.equal(isDemoText('---\nsite: https://x.example.com/\n---\n1. Hi'), false);
   assert.equal(isDemoText('1. Hi'), false);
-  const file = new URL('../examples/apex-callout-tour/apex-callout-tour.md', import.meta.url).pathname;
+  const file = fileURLToPath(new URL('../examples/apex-callout-tour/apex-callout-tour.md', import.meta.url));
   assert.ok(fs.existsSync(file));
   const tour = readDemo(file, { org: 'SDO_simple' });
   assert.deepEqual(tour.chapters.map(c => c.title), ['Opening', 'The External Credential holds the secret', 'The Named Credential points to the API', 'One setting per callout', 'Call it from Apex', 'Close']);

@@ -7,6 +7,8 @@ import path from 'node:path';
 import { checkSteps, askClaude } from '../src/demo/ai.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-ai-'));
+// On Windows claude is a .cmd run through a shell with quoted arguments; a fake .cmd would not prove that quoting.
+const skip = process.platform === 'win32' && 'the fake claude needs a POSIX shell';
 const saved = process.env.SFDEMO_CLAUDE;
 after(() => { if (saved === undefined) delete process.env.SFDEMO_CLAUDE; else process.env.SFDEMO_CLAUDE = saved; });
 
@@ -36,7 +38,7 @@ test('the steps of an answer: only the allowed kinds, each with what it needs, a
   assert.throws(() => checkSteps(Array.from({ length: 13 }, () => ({ type: 'press', key: 'Tab' })), 'd.md:3'), /came back with 13 steps/);
 });
 
-test('Claude Code is asked with the prompt on stdin, no tools, a JSON schema and no saved session', async () => {
+test('Claude Code is asked with the prompt on stdin, no tools, a JSON schema and no saved session', { skip }, async () => {
   const seen = fakeClaude(JSON.stringify({ type: 'result', is_error: false, result: '', structured_output: { steps: [{ type: 'click', label: 'Manage' }] } }));
   const answer = await askClaude('Instruction: open the callout settings');
   assert.deepEqual(answer, { steps: [{ type: 'click', label: 'Manage' }] });
@@ -48,7 +50,7 @@ test('Claude Code is asked with the prompt on stdin, no tools, a JSON schema and
   assert.equal(JSON.parse(args[args.indexOf('--json-schema') + 1]).properties.steps.items.properties.type.enum[0], 'click');
 });
 
-test('an answer in the result text, a refusal, an error exit: each read or reported', async () => {
+test('an answer in the result text, a refusal, an error exit: each read or reported', { skip }, async () => {
   fakeClaude(JSON.stringify({ result: 'Here you go: {"steps":[{"type":"point","label":"x-api-key"}]}' }));
   assert.deepEqual(await askClaude('p'), { steps: [{ type: 'point', label: 'x-api-key' }] });
   fakeClaude(JSON.stringify({ is_error: true, result: 'Credit balance is too low' }));

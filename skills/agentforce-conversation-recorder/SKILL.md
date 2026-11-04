@@ -6,7 +6,9 @@ description: Records scripted Agentforce conversations with the sfdemo CLI (no A
 # Agentforce conversation recorder
 
 `sfdemo` does the recording deterministically; your job is to prepare scenarios, launch runs, read the results, and
-repair selector packs when a Salesforce release changes the chat. Reference: [README](../../README.md), scenario
+repair selector packs when a Salesforce release changes the chat. A whole narrated demo (slides, a voice-over, live
+steps beyond the chat) is the [salesforce-demo-studio](../salesforce-demo-studio/SKILL.md) skill's: a conversation
+recorded here can become one of its chapters. Reference: [README](../../README.md), scenario
 format in [docs/SCENARIOS.md](../../docs/SCENARIOS.md), maintenance in [docs/RELEASE-PROOF.md](../../docs/RELEASE-PROOF.md).
 
 ## Setup

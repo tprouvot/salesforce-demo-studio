@@ -47,8 +47,10 @@ async function pageText(page, limit = 24000) {
 export function askClaude(prompt, { timeout = 180000 } = {}) {
   const bin = process.env.SFDEMO_CLAUDE || 'claude';
   const args = ['-p', '--output-format', 'json', '--json-schema', JSON.stringify(SCHEMA), '--tools', '', '--no-session-persistence', '--strict-mcp-config', '--model', 'sonnet'];
+  const windows = process.platform === 'win32'; // claude is claude.cmd there, which needs a shell, and quoted arguments
+  const quoted = windows ? args.map(a => (/[\s"&|<>^]/.test(a) || a === '' ? `"${a.replace(/"/g, '""')}"` : a)) : args;
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, { stdio: ['pipe', 'pipe', 'pipe'], shell: process.platform === 'win32' });
+    const child = spawn(bin, quoted, { stdio: ['pipe', 'pipe', 'pipe'], shell: windows });
     let out = '';
     let err = '';
     const timer = setTimeout(() => { child.kill(); reject(new Error(`claude -p gave no answer within ${timeout / 1000} s`)); }, timeout);
