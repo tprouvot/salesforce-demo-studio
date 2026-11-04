@@ -26,7 +26,7 @@ export function renderReportHtml(report) {
 <script>${asset('render.js')}</script>
 <script>
 const report = ${safeJson(report)};
-AfrecRender.renderRun(document.getElementById('app'), report, { mediaBase: '' });
+SfdemoRender.renderRun(document.getElementById('app'), report, { mediaBase: '' });
 </script>
 </body>
 </html>

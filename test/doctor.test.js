@@ -1,5 +1,5 @@
 /**
- * afrec doctor and afrec heal: element statuses, the terminal summary, the public report, the repair bundle, and
+ * sfdemo doctor and sfdemo heal: element statuses, the terminal summary, the public report, the repair bundle, and
  * whole checks against the fake org (helpers/fake-org.js): healthy, a failed prerequisite, healed locators confirmed
  * then promoted. The live checks need Chromium and a POSIX shell for the fake sf CLI.
  */
@@ -20,17 +20,17 @@ import { installFakeSf, orgRules, fakeSfSupported } from './helpers/fake-sf.js';
 import { startFakeOrg } from './helpers/fake-org.js';
 
 const hasBrowser = fs.existsSync(chromium.executablePath());
-if (!hasBrowser && process.env.AFREC_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
+if (!hasBrowser && process.env.SFDEMO_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
 const live = !hasBrowser ? 'Chromium is not installed' : !fakeSfSupported ? 'the fake sf CLI needs a POSIX shell' : false;
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-doctor-'));
-process.env.AFREC_HOME = path.join(tmp, 'home'); // promoted packs land here, and ~/.afrec/packs stays out of the tests
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-doctor-'));
+process.env.SFDEMO_HOME = path.join(tmp, 'home'); // promoted packs land here, and ~/.sfdemo/packs stays out of the tests
 let n = 0;
-/** A fresh project: its own .afrec, so doctor folders never collide. */
+/** A fresh project: its own .sfdemo, so doctor folders never collide. */
 const project = () => {
   const dir = path.join(tmp, `project-${++n}`);
   fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(path.join(dir, 'afrec.config.json'), '{}');
+  fs.writeFileSync(path.join(dir, 'sfdemo.config.json'), '{}');
   return loadProject({ dir });
 };
 
@@ -75,8 +75,8 @@ test('element statuses: ok, fallback, healed, missing, unused, and "any" element
 
 test('the public report keeps no alias, host or local path, and no prerequisite detail', () => {
   const r = publicReport({
-    surface: 'messaging', target: 'riders.example.com', dir: '/Users/me/project/.afrec/doctor/x', release: "Winter '27", apiVersion: 66, status: 'broken',
-    error: 'no Embedded Messaging launcher on https://riders.example.com/s/ (see /Users/me/project/.afrec/doctor/x/error.png)',
+    surface: 'messaging', target: 'riders.example.com', dir: '/Users/me/project/.sfdemo/doctor/x', release: "Winter '27", apiVersion: 66, status: 'broken',
+    error: 'no Embedded Messaging launcher on https://riders.example.com/s/ (see /Users/me/project/.sfdemo/doctor/x/error.png)',
     exchanges: [{ text: 'Hi', ok: false, error: 'timeout on riders.example.com' }],
     prereqs: [{ name: 'org', ok: true, level: 'ok', detail: 'myAlias connected, API 66' }], elements: [], healedNow: [],
   });
@@ -93,7 +93,7 @@ test('the summary: every element and prerequisite, and the next step when broken
     prereqs: [{ name: 'node', ok: true, level: 'ok', detail: 'Node 24' }, { name: 'agents', ok: false, level: 'warn', detail: '0 active employee agent(s)' }],
     exchanges: [{ text: 'Hi', ok: true, seconds: 3 }, { text: 'What can you help me with?', ok: false, error: 'no reply within 180 s' }],
     busySeen: false, elements: [{ name: 'input', status: 'fallback', index: 1, required: true }, { name: 'menu', status: 'unused' }, { name: 'userText', status: 'missing', required: true }],
-    healedNow: ['userText'], confirmed: [], error: null, dir: '/p/.afrec/doctor/20261026-lightning',
+    healedNow: ['userText'], confirmed: [], error: null, dir: '/p/.sfdemo/doctor/20261026-lightning',
   };
   const text = describeDoctor(report);
   assert.match(text, /^lightning @ myOrg: BROKEN \(Winter '27, API 66\)\n  selector pack lightning 2026\.10\.1 \(bundled\)/);
@@ -103,7 +103,7 @@ test('the summary: every element and prerequisite, and the next step when broken
   assert.match(text, /! input +fallback \(candidate 2\)/);
   assert.ok(!/menu/.test(text), 'unused elements are left out');
   assert.match(text, /healed during this check: userText/);
-  assert.match(text, /next: afrec heal \/p\/\.afrec\/doctor\/20261026-lightning/);
+  assert.match(text, /next: sfdemo heal \/p\/\.sfdemo\/doctor\/20261026-lightning/);
 });
 
 test('a fixture needs a snapshot of a chat that opened, without denylisted terms', () => {
@@ -167,7 +167,7 @@ test('a healthy check: canary answered, every required element on its first cand
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(bundle, 'failing.json'), 'utf8')), []);
   const shared = fs.readFileSync(path.join(bundle, 'doctor.json'), 'utf8');
   assert.ok(!shared.includes(org.url) && !shared.includes(p.dir), 'no org URL or local path in the bundle');
-  assert.match(fs.readFileSync(path.join(bundle, 'README.md'), 'utf8'), /afrec fixtures test fixture --pack pack\.json/);
+  assert.match(fs.readFileSync(path.join(bundle, 'README.md'), 'utf8'), /sfdemo fixtures test fixture --pack pack\.json/);
   // another project: bundle folders are named to the second, so a second bundle now would share the first one's folder
   const other = project();
   assert.throws(() => writeHealBundle(other, report.dir, { denylist: ['Agentforce'] }), /denylisted terms in .*: no bundle written/);
@@ -182,12 +182,12 @@ test('healed locators: a check that works with them confirms them, and promote t
   assert.equal(report.status, 'degraded', describeDoctor(report));
   assert.equal(report.elements.find(e => e.name === 'userText').status, 'healed');
   assert.deepEqual(report.confirmed, ['userText']);
-  assert.match(describeDoctor(report), /confirmed healed locators: userText: run afrec selectors promote/);
+  assert.match(describeDoctor(report), /confirmed healed locators: userText: run sfdemo selectors promote/);
   assert.ok(readOverrides(p.stateDir).lightning.confirmedAt);
   const r = promote(p, 'lightning', { writeBundled: false });
   assert.equal(r.inToolRepo, false);
-  assert.deepEqual(r.pack.verified.at(-1).by, 'afrec doctor');
-  assert.ok(fs.existsSync(path.join(process.env.AFREC_HOME, 'packs', 'lightning.json')));
+  assert.deepEqual(r.pack.verified.at(-1).by, 'sfdemo doctor');
+  assert.ok(fs.existsSync(path.join(process.env.SFDEMO_HOME, 'packs', 'lightning.json')));
   assert.ok(fs.existsSync(path.join(p.stateDir, 'promoted', 'lightning.json')));
   assert.deepEqual(readOverrides(p.stateDir), {});
 });

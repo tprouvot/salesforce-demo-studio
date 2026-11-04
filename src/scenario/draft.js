@@ -1,5 +1,5 @@
 /**
- * `afrec new`: a scenario file to start from. With an org, its settings are checked there (the agent, the user and,
+ * `sfdemo new`: a scenario file to start from. With an org, its settings are checked there (the agent, the user and,
  * on Messaging, the user's site) and the file lists, in a comment, what the agent can do: the topics and actions of
  * its active version. The messages are left to the author (a person or a coding agent): the tool never invents them.
  */
@@ -87,8 +87,8 @@ function signedIn(conv, facts) {
 
 function capabilities(conv, facts, date) {
   if (!facts.topics) {
-    if (!conv.org) return ['Run afrec new again with --org <alias> to list here what the agent can do.'];
-    return facts.agent ? [`What ${facts.agent.label} can do could not be read from ${conv.org} (afrec new prints why).`] : [];
+    if (!conv.org) return ['Run sfdemo new again with --org <alias> to list here what the agent can do.'];
+    return facts.agent ? [`What ${facts.agent.label} can do could not be read from ${conv.org} (sfdemo new prints why).`] : [];
   }
   const { version, topics, actions } = facts.topics;
   const lines = [`${facts.agent.label} (version ${version}, read from ${conv.org} on ${date}) can do this:`];
@@ -125,8 +125,8 @@ export function draftScenario({ file, settings, facts, defaults = {}, date = new
     'Steps: a message, click: <label or /regex/>, wait: <seconds>, type-from: prompt one-time code.',
     'Checks: expect: <regex>, expect-not: <regex>, expect-button: <label>, max-seconds: <seconds>.',
     'Every message spends agent credits and can run real actions. Check the plan first:',
-    `  afrec run --dry-run ${rel}`,
-    'Reference: docs/SCENARIOS.md in the afrec repository.',
+    `  sfdemo run --dry-run ${rel}`,
+    'Reference: docs/SCENARIOS.md in the sfdemo repository.',
     '',
     `Signed in: ${signedIn(conv, facts)}`,
     '',

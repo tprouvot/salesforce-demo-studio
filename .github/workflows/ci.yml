@@ -29,10 +29,10 @@ jobs:
       - name: Tests, fixtures included (offline, no org needed)
         run: npm test
         env:
-          AFREC_REQUIRE_BROWSER: '1'
+          SFDEMO_REQUIRE_BROWSER: '1'
       - name: Selector packs are valid
         run: |
-          node bin/afrec.js selectors check packs/lightning.json
-          node bin/afrec.js selectors check packs/messaging.json
+          node bin/sfdemo.js selectors check packs/lightning.json
+          node bin/sfdemo.js selectors check packs/messaging.json
       - name: The examples plan
-        run: node bin/afrec.js run examples/ebike --dry-run --org myAdminAlias
+        run: node bin/sfdemo.js run examples/ebike --dry-run --org myAdminAlias

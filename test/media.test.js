@@ -7,7 +7,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { ffmpegBinary, makeMp4, makeGif, probeDuration } from '../src/engine/media.js';
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-media-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-media-'));
 const clip = path.join(tmp, 'clip.mp4');
 const gifSize = file => { const b = fs.readFileSync(file); return { width: b.readUInt16LE(6), height: b.readUInt16LE(8) }; };
 

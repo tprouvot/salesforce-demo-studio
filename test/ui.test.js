@@ -1,6 +1,6 @@
 /**
  * The browser scripts: they parse, and a report renders in Chromium (overview, one conversation, the baseline diff)
- * with no script error. Skipped without Chromium, unless AFREC_REQUIRE_BROWSER=1.
+ * with no script error. Skipped without Chromium, unless SFDEMO_REQUIRE_BROWSER=1.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';

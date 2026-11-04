@@ -1,4 +1,4 @@
-/* The UI only (afrec ui); style.css is shared with report.html. */
+/* The UI only (sfdemo ui); style.css is shared with report.html. */
 .top { background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
 .top .wrap { padding-top: 10px; padding-bottom: 10px; }
 .brand { font-size: 16px; margin-right: 16px; }

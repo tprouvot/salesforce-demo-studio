@@ -6,7 +6,7 @@ import path from 'node:path';
 import { readScenarioFiles, parseScenarioText, toMarkdown } from '../src/scenario/parse.js';
 import { resolveConversation } from '../src/scenario/resolve.js';
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-test-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-test-'));
 const write = (name, text) => { const p = path.join(tmp, name); fs.writeFileSync(p, text); return p; };
 
 test('markdown: front matter, steps, nested checks, multi-line message, escape, notes', () => {
@@ -33,14 +33,14 @@ test('markdown: the new checks, type-from prompt and file, comments after direct
     '1. Hi',
     '2. How much is a two-hour ride?', '   - expect: /\\d/', '   - expect-not: sorry|went wrong', '   - max-seconds: 20', '   - expect-button: /reserve/',
     '3. type-from: prompt one-time code   # from the rider\'s email',
-    '4. type-from: /tmp/afrec-code.txt',
+    '4. type-from: /tmp/sfdemo-code.txt',
   ].join('\n'));
   const conv = resolveConversation(readScenarioFiles([file])[0]);
   assert.deepEqual(conv.steps.map(s => s.type), ['message', 'message', 'expect', 'expect-not', 'max-seconds', 'expect-button', 'message', 'message']);
   assert.equal(conv.steps[4].seconds, 20);
   assert.equal(conv.steps[5].label, '/reserve/');
   assert.deepEqual([conv.steps[6].prompt, conv.steps[6].fromFile, conv.steps[6].label], [true, null, 'one-time code']);
-  assert.equal(conv.steps[7].fromFile, '/tmp/afrec-code.txt');
+  assert.equal(conv.steps[7].fromFile, '/tmp/sfdemo-code.txt');
   assert.equal(conv.inputTimeout, 600000);
 });
 

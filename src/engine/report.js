@@ -19,7 +19,7 @@ export function writeTranscript(conv, result, dir) {
     `- Script: ${path.relative(process.cwd(), conv.file) || conv.file}`,
   ];
   if (result.selectors) lines.push(`- Selectors: ${result.selectors.pack} ${result.selectors.version}${result.selectors.release ? ` for ${result.selectors.release}` : ''}`);
-  if (result.selectors && result.selectors.healed.length) lines.push(`- **Running on healed locators: ${result.selectors.healed.join(', ')}** (run \`afrec doctor\`, then \`afrec selectors promote\`)`);
+  if (result.selectors && result.selectors.healed.length) lines.push(`- **Running on healed locators: ${result.selectors.healed.join(', ')}** (run \`sfdemo doctor\`, then \`sfdemo selectors promote\`)`);
   lines.push('');
   if (result.warmup) lines.push(`_Warm-up: "${result.warmup.text}" was sent first, because the first message only opens the conversation. The agent answered:_`, '', quote(result.warmup.reply), '');
   for (const ex of result.exchanges) {
@@ -54,7 +54,7 @@ export function writeRunReport(results, run) {
     '',
   ];
   const healed = results.filter(r => r.selectors && r.selectors.healed.length);
-  if (healed.length) lines.push('## Running on healed locators', '', ...healed.map(r => `- ${r.name}: ${r.selectors.healed.join(', ')}`), '', 'Run `afrec doctor` to confirm them, then `afrec selectors promote`.', '');
+  if (healed.length) lines.push('## Running on healed locators', '', ...healed.map(r => `- ${r.name}: ${r.selectors.healed.join(', ')}`), '', 'Run `sfdemo doctor` to confirm them, then `sfdemo selectors promote`.', '');
   const flagged = results.filter(r => r.flags.length);
   if (flagged.length) lines.push('## Flags', '', ...flagged.flatMap(r => r.flags.map(f => `- ${r.name}, exchange ${f}`)), '');
   const warned = results.filter(r => r.warnings.length);

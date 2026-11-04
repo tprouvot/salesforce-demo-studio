@@ -8,9 +8,9 @@ import { startServer } from '../src/ui/server.js';
 import { loadProject } from '../src/config.js';
 import { makeRun, result } from './helpers/runs.js';
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-ui-'));
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-ui-'));
 fs.mkdirSync(path.join(dir, 'scenarios'));
-fs.writeFileSync(path.join(dir, 'afrec.config.json'), JSON.stringify({ scenarios: 'scenarios', recordings: '.local/recordings' }));
+fs.writeFileSync(path.join(dir, 'sfdemo.config.json'), JSON.stringify({ scenarios: 'scenarios', recordings: '.local/recordings' }));
 fs.writeFileSync(path.join(dir, 'scenarios', 'guest.md'), '---\nsite: https://x.example.com/\n---\n1. Hi\n');
 fs.writeFileSync(path.join(dir, 'creds.txt'), 'rider@x.example s3cret  (rider)\n');
 const recordings = path.join(dir, '.local', 'recordings');
@@ -30,12 +30,12 @@ before(async () => {
 after(async () => { await server.close(); });
 
 const get = (p, headers = {}) => fetch(base + p, { headers: { cookie, ...headers } });
-const send = (method, p, body, headers = {}) => fetch(base + p, { method, headers: { cookie, 'content-type': 'application/json', 'x-afrec-token': server.token, ...headers }, body: JSON.stringify(body) });
+const send = (method, p, body, headers = {}) => fetch(base + p, { method, headers: { cookie, 'content-type': 'application/json', 'x-sfdemo-token': server.token, ...headers }, body: JSON.stringify(body) });
 
 test('the token is required, changes need it in a header, and the Host must be the server', async () => {
   assert.equal((await fetch(base + '/api/state')).status, 401);
-  assert.equal((await fetch(base + '/api/state', { headers: { cookie: 'afrec_token=wrong' } })).status, 401);
-  assert.equal((await send('PUT', '/api/scenario', { file: 'x.md', text: '1. Hi' }, { 'x-afrec-token': 'nope' })).status, 403);
+  assert.equal((await fetch(base + '/api/state', { headers: { cookie: 'sfdemo_token=wrong' } })).status, 401);
+  assert.equal((await send('PUT', '/api/scenario', { file: 'x.md', text: '1. Hi' }, { 'x-sfdemo-token': 'nope' })).status, 403);
   const index = await get('/');
   assert.equal(index.status, 200);
   assert.match(index.headers.get('content-security-policy'), /default-src 'self'/);
@@ -57,9 +57,9 @@ test('state, scenarios, validation and saving', async () => {
 });
 
 test('paths cannot leave the project', async () => {
-  assert.equal((await get('/api/scenario?file=../afrec.config.json')).status, 400);
+  assert.equal((await get('/api/scenario?file=../sfdemo.config.json')).status, 400);
   assert.equal((await send('PUT', '/api/scenario', { file: '../../evil.md', text: '1. Hi' })).status, 400);
-  assert.equal((await get('/runs/..%2F..%2Fafrec.config.json')).status, 400);
+  assert.equal((await get('/runs/..%2F..%2Fsfdemo.config.json')).status, 400);
 });
 
 test('a run without conversations is refused with the reason', async () => {
@@ -93,7 +93,7 @@ test('static files: the UI scripts, and nothing else', async () => {
 test('runs: the list newest first with counts, one run compared with the baseline, the baseline set and refused outside', async () => {
   const runs = await (await get('/api/runs')).json();
   assert.deepEqual(runs.map(r => [r.id, r.total, r.recorded, r.flagged, r.failed]), [['20261026-100000', 2, 0, 1, 1], ['20261020-100000', 1, 1, 0, 0]]);
-  assert.equal((await send('POST', '/api/baseline', { id: '../../afrec.config.json' })).status, 400);
+  assert.equal((await send('POST', '/api/baseline', { id: '../../sfdemo.config.json' })).status, 400);
   assert.deepEqual(await (await send('POST', '/api/baseline', { id: '20261020-100000' })).json(), { baseline: '20261020-100000' });
   const one = await (await get('/api/run?id=20261026-100000')).json();
   assert.equal(one.baseline, '20261020-100000');
@@ -139,8 +139,8 @@ test('scenario files: read back with their plan, deleted, and refused when not a
   assert.ok(fs.existsSync(path.join(dir, 'scenarios', 'nested', 'gone.md')));
   assert.deepEqual(await (await send('DELETE', '/api/scenario?file=nested/gone.md')).json(), { ok: true });
   assert.ok(!fs.existsSync(path.join(dir, 'scenarios', 'nested', 'gone.md')));
-  assert.equal((await send('DELETE', '/api/scenario?file=../afrec.config.json')).status, 400);
-  assert.ok(fs.existsSync(path.join(dir, 'afrec.config.json')));
+  assert.equal((await send('DELETE', '/api/scenario?file=../sfdemo.config.json')).status, 400);
+  assert.ok(fs.existsSync(path.join(dir, 'sfdemo.config.json')));
 });
 
 test('credentials files: usernames and notes only, and only inside the project', async () => {
@@ -157,7 +157,7 @@ test('the plan, the schema, an unknown route, a body that is not JSON, doctor an
   const unknown = await get('/api/nope');
   assert.equal(unknown.status, 404);
   assert.deepEqual(await unknown.json(), { error: 'not found' });
-  const notJson = await fetch(base + '/api/plan', { method: 'POST', headers: { cookie, 'x-afrec-token': server.token, 'content-type': 'application/json' }, body: '{ files: ' });
+  const notJson = await fetch(base + '/api/plan', { method: 'POST', headers: { cookie, 'x-sfdemo-token': server.token, 'content-type': 'application/json' }, body: '{ files: ' });
   assert.equal(notJson.status, 400);
   assert.deepEqual(await notJson.json(), { error: 'invalid JSON' });
   const doctor = await send('POST', '/api/doctor', { targets: [{}, null] });

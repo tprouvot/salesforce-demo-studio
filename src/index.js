@@ -1,5 +1,5 @@
 /**
- * The library behind the afrec CLI, for other front ends (a future `sf agent record` plugin, CI scripts):
+ * The library behind the sfdemo CLI, for other front ends (a future `sf agent record` plugin, CI scripts):
  *
  *   const project = loadProject();
  *   const { conversations, errors } = planRun({ project, inputs: ['scenarios/'] });

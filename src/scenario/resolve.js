@@ -108,7 +108,7 @@ export function resolveConversation(raw, defaults = {}) {
   const warmup = s.warmup === undefined ? '' : String(s.warmup).trim();
   conv.warmup = /^(false|no|off|0)$/i.test(warmup) ? false : /^(true|yes|on|1)?$/i.test(warmup) ? 'Hi' : warmup;
 
-  if (conv.authUrl && !conv.org) conv.org = 'afrec-' + path.parse(conv.authUrl).name.replace(/[^A-Za-z0-9]/g, '');
+  if (conv.authUrl && !conv.org) conv.org = 'sfdemo-' + path.parse(conv.authUrl).name.replace(/[^A-Za-z0-9]/g, '');
   if (conv.surface === 'lightning') {
     if (!conv.org && !(conv.credentials && conv.loginUrl)) throw new Error(`${where}: a Lightning conversation needs org: (a sf alias) or authUrl:`);
     conv.signIn = conv.user && conv.credentials ? 'password' : conv.user ? 'login-as' : 'alias-user';

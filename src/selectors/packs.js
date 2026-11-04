@@ -2,10 +2,10 @@
  * Selector packs: where they come from, which one applies to an org, and the healed overrides layered on top.
  *
  *   bundled     packs/*.json in this package
- *   downloaded  ~/.afrec/packs/*.json, written by `afrec selectors update` (wins over a bundled pack with the same id
+ *   downloaded  ~/.sfdemo/packs/*.json, written by `sfdemo selectors update` (wins over a bundled pack with the same id
  *               when its version is newer)
- *   overrides   <project>/.afrec/overrides.json: candidates the structural fallback found during a run, tried first,
- *               and flagged in every report until `afrec doctor` confirms them and `afrec selectors promote` turns
+ *   overrides   <project>/.sfdemo/overrides.json: candidates the structural fallback found during a run, tried first,
+ *               and flagged in every report until `sfdemo doctor` confirms them and `sfdemo selectors promote` turns
  *               them into a pack entry
  *
  * A pack applies from its minApiVersion; for an org at API version V the pack of that surface with the highest

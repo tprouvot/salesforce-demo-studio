@@ -1,11 +1,11 @@
 ---
 name: agentforce-scenario-generate
-description: Writes afrec conversation scenarios (.md or .csv) for an Agentforce agent from what it really does - the topics, actions and instructions of its active version, read from the org with afrec new - for a demo recording or a regression suite, then calibrates their checks on a probe run so they pass on good answers and flag bad ones. Use when the user wants test conversations, a demo script or scenarios for an Agentforce agent, does not know what to write in a scenario, or has expect checks that fail on correct answers.
+description: Writes sfdemo conversation scenarios (.md or .csv) for an Agentforce agent from what it really does - the topics, actions and instructions of its active version, read from the org with sfdemo new - for a demo recording or a regression suite, then calibrates their checks on a probe run so they pass on good answers and flag bad ones. Use when the user wants test conversations, a demo script or scenarios for an Agentforce agent, does not know what to write in a scenario, or has expect checks that fail on correct answers.
 ---
 
 # Agentforce scenario generation
 
-You write the conversations `afrec` replays; recording them is the
+You write the conversations `sfdemo` replays; recording them is the
 [agentforce-conversation-recorder](../agentforce-conversation-recorder/SKILL.md) skill. Format reference:
 [docs/SCENARIOS.md](../../docs/SCENARIOS.md); a complete set: [examples/ebike/](../../examples/ebike/).
 
@@ -26,8 +26,8 @@ panel, or the page where the Messaging widget loads. Never guess a site URL: ask
 ## 2. Read what the agent can do
 
 ```bash
-afrec orgs                       # the sf aliases
-afrec new <name> --org <alias> [--agent <label>] [--user <username>] [--site <url>] --json
+sfdemo orgs                       # the sf aliases
+sfdemo new <name> --org <alias> [--agent <label>] [--user <username>] [--site <url>] --json
 ```
 
 It prints the active agents, the one picked, the topics of its active version (description, scope, instructions,
@@ -61,7 +61,7 @@ Start loose; step 5 tightens them.
 - `expect-button:` for the card or quick reply an action sends.
 - `max-seconds:` only when timing matters, and generous (30 or more).
 
-Then `afrec run --dry-run <files>`: fix every error, and show the user the plan.
+Then `sfdemo run --dry-run <files>`: fix every error, and show the user the plan.
 
 ## 5. Calibrate on a probe run
 
@@ -69,7 +69,7 @@ Every message spends agent credits and can run real actions (create a task, send
 run, prefer a sandbox, and wait for the user's go-ahead.
 
 ```bash
-afrec run <files> --record none     # transcripts only (a record: setting in a file wins over the flag)
+sfdemo run <files> --record none     # transcripts only (a record: setting in a file wins over the flag)
 ```
 
 Read each `transcript.md` (every answer and its check results), then:
@@ -79,9 +79,9 @@ Read each `transcript.md` (every answer and its check results), then:
 - an answer showing the agent misread the question: rephrase the message, not the check;
 - for a suite, probe a second time and keep in `expect:` only the words both answers share.
 
-Once it passes, `afrec baseline set latest`: later runs compare every answer with this one.
+Once it passes, `sfdemo baseline set latest`: later runs compare every answer with this one.
 
 ## 6. Hand over
 
 Give the user the files, one line per conversation (what it shows, who signs in), the actions it runs, and the
-command to record: `afrec run`, or `afrec ui`.
+command to record: `sfdemo run`, or `sfdemo ui`.

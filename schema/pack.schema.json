@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/tprouvot/agentforce-conversation-recorder/schema/pack.schema.json",
+  "$id": "https://github.com/tprouvot/salesforce-demo-studio/schema/pack.schema.json",
   "title": "Selector pack",
   "description": "Every locator the recorder needs for one chat surface, as data. Each element lists candidates tried in order; the first that matches wins. A pack never contains code.",
   "type": "object",
@@ -14,7 +14,7 @@
     "minApiVersion": { "type": "number", "minimum": 40, "description": "The pack applies to orgs at this API version or later (until a pack with a higher minimum takes over)." },
     "verified": {
       "type": "array",
-      "description": "Where the pack was checked live (by afrec doctor) or against fixtures.",
+      "description": "Where the pack was checked live (by sfdemo doctor) or against fixtures.",
       "items": {
         "type": "object",
         "additionalProperties": false,

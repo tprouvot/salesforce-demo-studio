@@ -1,5 +1,5 @@
 /**
- * Compares a run with a baseline run (`afrec baseline set <run>`): per conversation (by name) and per exchange (by
+ * Compares a run with a baseline run (`sfdemo baseline set <run>`): per conversation (by name) and per exchange (by
  * number), what changed in the answer (a word diff and a similarity score), its timing, and its flags. It catches an
  * agent that started answering differently, or a release that changed the chat, at a glance.
  */

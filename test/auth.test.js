@@ -1,6 +1,6 @@
 /**
  * Signing in, against the fake org and site of helpers/fake-org.js, with the sf CLI faked (helpers/fake-sf.js).
- * Needs Chromium (skipped without it, unless AFREC_REQUIRE_BROWSER=1) and a POSIX shell for the fake sf.
+ * Needs Chromium (skipped without it, unless SFDEMO_REQUIRE_BROWSER=1) and a POSIX shell for the fake sf.
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,10 +14,10 @@ import { installFakeSf, orgRules, fakeSfSupported } from './helpers/fake-sf.js';
 import { startFakeOrg, startFakeSite } from './helpers/fake-org.js';
 
 const hasBrowser = fs.existsSync(chromium.executablePath());
-if (!hasBrowser && process.env.AFREC_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
+if (!hasBrowser && process.env.SFDEMO_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
 const skip = !hasBrowser ? 'Chromium is not installed' : !fakeSfSupported ? 'the fake sf CLI needs a POSIX shell' : false;
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-auth-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-auth-'));
 const credentials = path.join(tmp, 'creds.txt');
 fs.writeFileSync(credentials, [
   '# test users of the fake org',

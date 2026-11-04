@@ -1,7 +1,7 @@
 /**
  * Terms that must never be published (customer names, program names, org domains, agent names): one per line in
- * <project>/.afrec/denylist.txt or ~/.afrec/denylist.txt, `#` for comments. Both files stay local (.afrec is
- * gitignored, ~/.afrec is outside the repository). `afrec fixtures add`, `afrec heal` and the pre-commit hook
+ * <project>/.sfdemo/denylist.txt or ~/.sfdemo/denylist.txt, `#` for comments. Both files stay local (.sfdemo is
+ * gitignored, ~/.sfdemo is outside the repository). `sfdemo fixtures add`, `sfdemo heal` and the pre-commit hook
  * (scripts/check-denylist.js) refuse content that contains one.
  */
 import fs from 'node:fs';

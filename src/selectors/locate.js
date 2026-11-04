@@ -1,6 +1,6 @@
 /**
  * Pack candidates as Playwright locators, and a record of which candidate matched each element. The record is what
- * `afrec doctor` reports: the first candidate matching is healthy, a later one means the primary locator broke (still
+ * `sfdemo doctor` reports: the first candidate matching is healthy, a later one means the primary locator broke (still
  * working, but a release changed something), none means the element is missing.
  */
 

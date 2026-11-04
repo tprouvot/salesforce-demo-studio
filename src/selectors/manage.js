@@ -1,5 +1,5 @@
 /**
- * afrec selectors: list the packs, download newer ones (data only, schema-checked), promote confirmed healed
+ * sfdemo selectors: list the packs, download newer ones (data only, schema-checked), promote confirmed healed
  * overrides into a pack, and check a pack file.
  */
 import fs from 'node:fs';
@@ -7,7 +7,7 @@ import path from 'node:path';
 import { allPacks, checkPack, compareVersions, readOverrides, writeOverrides, selectPack, releaseName, BUNDLED_DIR } from './packs.js';
 import { homeDir, PACKAGE_ROOT } from '../config.js';
 
-/** Packs and the project's overrides, for `afrec selectors list` and the UI. */
+/** Packs and the project's overrides, for `sfdemo selectors list` and the UI. */
 export function packStatus(project) {
   const packs = allPacks().map(({ id, surface, version, minApiVersion, origin, verified }) => ({ id, surface, version, minApiVersion, origin, verified: verified || [] }));
   return { packs, overrides: readOverrides(project.stateDir) };
@@ -15,7 +15,7 @@ export function packStatus(project) {
 
 /**
  * Downloads index.json and the packs it lists from `baseUrl`, keeps the ones that are valid and newer than what is
- * installed, and saves them to ~/.afrec/packs. Returns [{ id, version, action }].
+ * installed, and saves them to ~/.sfdemo/packs. Returns [{ id, version, action }].
  */
 export async function updatePacks(baseUrl) {
   const base = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
@@ -52,7 +52,7 @@ const nextVersion = current => {
 /**
  * Turns the confirmed overrides of a surface into a pack entry: the healed candidates go first, the version is
  * bumped and the release recorded. In the tool's own repository the bundled pack is updated (ready for a pull
- * request); elsewhere the pack goes to ~/.afrec/packs (it applies at once) and a copy to .afrec/promoted/.
+ * request); elsewhere the pack goes to ~/.sfdemo/packs (it applies at once) and a copy to .sfdemo/promoted/.
  * @param {{ stateDir: string }} project
  * @param {string} surface
  * @param {{ force?: boolean, writeBundled?: boolean }} [options] writeBundled: update packs/ (default: when in the tool's repository)
@@ -61,7 +61,7 @@ export function promote(project, surface, { force = false, writeBundled } = {}) 
   const overrides = readOverrides(project.stateDir);
   const entry = overrides[surface];
   if (!entry || !Object.keys(entry.elements || {}).length) throw new Error(`no healed ${surface} locators to promote`);
-  if (!entry.confirmedAt && !force) throw new Error(`the healed ${surface} locators are not confirmed yet: run afrec doctor (it confirms them when the chat works with them), or pass --force`);
+  if (!entry.confirmedAt && !force) throw new Error(`the healed ${surface} locators are not confirmed yet: run sfdemo doctor (it confirms them when the chat works with them), or pass --force`);
   const base = selectPack(surface, entry.apiVersion);
   const { origin, file, ...pack } = JSON.parse(JSON.stringify(base));
   for (const [name, candidates] of Object.entries(entry.elements)) {
@@ -71,7 +71,7 @@ export function promote(project, surface, { force = false, writeBundled } = {}) 
     pack.elements[name].candidates = [...fresh.filter(c => !known.has(JSON.stringify({ ...c, note: undefined }))), ...pack.elements[name].candidates];
   }
   pack.version = nextVersion(pack.version);
-  pack.verified = [...(pack.verified || []), { apiVersion: entry.apiVersion || null, release: releaseName(entry.apiVersion) || '', date: new Date().toISOString().slice(0, 10), by: entry.confirmedAt ? 'afrec doctor' : 'healing (unconfirmed)' }];
+  pack.verified = [...(pack.verified || []), { apiVersion: entry.apiVersion || null, release: releaseName(entry.apiVersion) || '', date: new Date().toISOString().slice(0, 10), by: entry.confirmedAt ? 'sfdemo doctor' : 'healing (unconfirmed)' }];
   const problems = checkPack(pack);
   if (problems.length) throw new Error(`the promoted pack would be invalid: ${problems[0]}`);
   const text = JSON.stringify(pack, null, 2) + '\n';

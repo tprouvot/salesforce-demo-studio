@@ -1,8 +1,8 @@
 /**
- * afrec heal: when the doctor finds elements missing (or on fallback), it writes a repair bundle for a coding agent
+ * sfdemo heal: when the doctor finds elements missing (or on fallback), it writes a repair bundle for a coding agent
  * (Claude Code, Agentforce Vibes, Cursor...). The tool itself never calls an AI: the bundle is everything an agent
  * needs (the redacted snapshot, the accessibility tree, the pack, its schema, a ready fixture and the instructions in
- * README.md), and the fix is checked offline by `afrec fixtures test`.
+ * README.md), and the fix is checked offline by `sfdemo fixtures test`.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -99,12 +99,12 @@ Update \`pack.json\` so that every failing element is found again in the snapsho
 5. Verify, from this folder:
 
    \`\`\`sh
-   afrec selectors check pack.json
-   ${fixture ? 'afrec fixtures test fixture --pack pack.json' : '# no fixture could be made: re-run afrec doctor once the chat opens'}
+   sfdemo selectors check pack.json
+   ${fixture ? 'sfdemo fixtures test fixture --pack pack.json' : '# no fixture could be made: re-run sfdemo doctor once the chat opens'}
    \`\`\`
 
-6. Publish: copy \`pack.json\` over \`packs/${packFile}\` in the agentforce-conversation-recorder repository, add
+6. Publish: copy \`pack.json\` over \`packs/${packFile}\` in the salesforce-demo-studio repository, add
    \`fixture/\` as \`fixtures/${report.surface}/${(report.release || 'capture').replace(/\W+/g, '-').toLowerCase()}/\`, run \`npm test\`, and open a pull
-   request. Users get the fix with \`afrec selectors update\`, without a new release of the tool.
+   request. Users get the fix with \`sfdemo selectors update\`, without a new release of the tool.
 `;
 }

@@ -52,7 +52,7 @@
         h('div', { class: 'stat' }, h('b', {}, count('flagged')), 'flagged'),
         h('div', { class: 'stat' }, h('b', {}, count('failed')), 'failed'),
         report.comparison ? h('div', { class: 'stat' }, h('b', {}, report.comparison.conversations.filter(c => c.status !== 'same').length), 'changed since baseline') : null),
-      healed.length ? h('div', { class: 'banner warn' }, `Running on healed locators (${[...new Set(healed.flatMap(r => r.selectors.healed))].join(', ')}): the chat markup changed since the selector pack. Run afrec doctor, then afrec selectors promote.`) : null,
+      healed.length ? h('div', { class: 'banner warn' }, `Running on healed locators (${[...new Set(healed.flatMap(r => r.selectors.healed))].join(', ')}): the chat markup changed since the selector pack. Run sfdemo doctor, then sfdemo selectors promote.`) : null,
       h('div', { class: 'grid' }, results.map(r => {
         const thumb = r.outputs.includes('conversation.gif') ? media(opts.mediaBase, r, 'conversation.gif')
           : (r.exchanges.find(e => e.screenshot) ? media(opts.mediaBase, r, r.exchanges.find(e => e.screenshot).screenshot) : null);
@@ -122,5 +122,5 @@
     show((report.results || []).find(r => r.folder === initial) || null);
   }
 
-  window.AfrecRender = { renderRun, h, minutes, SURFACES, checkChip, diffView };
+  window.SfdemoRender = { renderRun, h, minutes, SURFACES, checkChip, diffView };
 })();

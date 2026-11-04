@@ -1,5 +1,5 @@
 /**
- * Offline fixtures: redacted snapshots of real chats (from afrec doctor) and hand-written ones, replayed in
+ * Offline fixtures: redacted snapshots of real chats (from sfdemo doctor) and hand-written ones, replayed in
  * Chromium without any org. Each fixture folder holds:
  *
  *   fixture.json   { surface, name, kind, release, apiVersion, sentTexts, expected: { roles, resolved }, heal? }
@@ -18,7 +18,7 @@ import { Tracker, findExisting } from '../selectors/locate.js';
 import { readChat, healChat } from '../engine/inpage.js';
 import { redactTree, renderHtml, redactText, denylistHits } from './redact.js';
 
-const ORIGIN = 'https://fixture.afrec.invalid';
+const ORIGIN = 'https://fixture.sfdemo.invalid';
 const TYPES = { '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.css': 'text/css' };
 
 /** Every fixture folder under `roots` (folders holding a fixture.json). */

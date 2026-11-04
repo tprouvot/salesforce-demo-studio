@@ -1,11 +1,12 @@
 {
-  "name": "agentforce-conversation-recorder",
+  "name": "salesforce-demo-studio",
   "version": "0.1.0",
-  "description": "Plays scripted Agentforce conversations in a real browser and records screenshots, an MP4, a GIF and a transcript. No AI at run time; selector packs, self-healing and a doctor keep it working across Salesforce releases.",
+  "description": "Records whole Salesforce demos: your slides, a voice-over read by a local Piper voice, and live actions in Lightning, Setup, Experience Cloud and Agentforce chats, assembled into one video. Also records Agentforce conversations on their own. No AI needed at record time.",
   "type": "module",
   "license": "Apache-2.0",
   "bin": {
-    "afrec": "bin/afrec.js"
+    "sfdemo": "bin/sfdemo.js",
+    "afrec": "bin/sfdemo.js"
   },
   "exports": {
     ".": "./src/index.js",

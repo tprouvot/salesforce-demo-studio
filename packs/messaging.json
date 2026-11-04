@@ -5,7 +5,7 @@
   "version": "2026.10.1",
   "minApiVersion": 60,
   "verified": [
-    { "apiVersion": 68, "release": "Winter '27", "date": "2026-10-26", "by": "afrec doctor (fixtures/*/winter-27)" }
+    { "apiVersion": 68, "release": "Winter '27", "date": "2026-10-26", "by": "sfdemo doctor (fixtures/*/winter-27)" }
   ],
   "elements": {
     "frame": {

@@ -36,7 +36,7 @@ export function readChat(spec) {
     return true;
   };
   const shown = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
-  const cache = (/** @type {any} */ (window)).__afrec || ((/** @type {any} */ (window)).__afrec = {});
+  const cache = (/** @type {any} */ (window)).__sfdemo || ((/** @type {any} */ (window)).__sfdemo = {});
   const key = JSON.stringify(spec);
   if (cache.key !== key) { cache.key = key; cache.root = null; cache.chosen = { agentText: 0, userText: 0 }; }
 
@@ -158,7 +158,7 @@ export function scrollChat(arg) {
     return true;
   };
   // the message elements of the last readChat (the caller reads the chat just before scrolling)
-  const cache = (/** @type {any} */ (window)).__afrec || {};
+  const cache = (/** @type {any} */ (window)).__sfdemo || {};
   const anchor = arg.bottom ? (cache.messageEls || [])[0] : (cache.userEls || [])[arg.userIndex];
   if (!anchor || !anchor.isConnected) return false;
   let scroller = null;
@@ -189,7 +189,7 @@ export function panelBox(spec) {
     if (c.css) { try { if (!el.matches(c.css)) return false; } catch (e) { return false; } }
     return true;
   };
-  const cache = (/** @type {any} */ (window)).__afrec || {};
+  const cache = (/** @type {any} */ (window)).__sfdemo || {};
   const root = cache.root && cache.root.isConnected ? cache.root : null;
   if (!root) return null;
   const box = el => { const r = el.getBoundingClientRect(); return r.width > 0 ? { x: r.x, y: r.y, width: r.width, height: r.height } : null; };
@@ -264,7 +264,7 @@ export function healChat(arg) {
  * @param {{ spec: { userText: any[] }, userIndex: number }} arg
  */
 export function userBubbleRect(arg) {
-  const cache = (/** @type {any} */ (window)).__afrec || {};
+  const cache = (/** @type {any} */ (window)).__sfdemo || {};
   const el = (cache.userEls || [])[arg.userIndex];
   if (!el || !el.isConnected) return null;
   const r = el.getBoundingClientRect();

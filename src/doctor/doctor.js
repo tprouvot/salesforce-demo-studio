@@ -1,5 +1,5 @@
 /**
- * afrec doctor: checks that the tool still works against an org, before a demo or on a preview sandbox weeks
+ * sfdemo doctor: checks that the tool still works against an org, before a demo or on a preview sandbox weeks
  * before a Salesforce release reaches production.
  *
  *   1. prerequisites, read-only: Chromium, ffmpeg, the sf CLI, the org (its API version picks the selector pack),
@@ -7,12 +7,12 @@
  *   2. a canary conversation (neutral messages, by default "Hi" and "What can you help me with?") through the real
  *      chat, recording which candidate of the pack matched each element
  *   3. a redacted snapshot of the chat (structure and UI labels, no org content) and its accessibility tree, the
- *      raw material of an offline fixture or of a repair bundle (afrec heal)
+ *      raw material of an offline fixture or of a repair bundle (sfdemo heal)
  *
  * Each element is ok (the pack's first candidate matched), fallback (a later one: the primary locator broke),
  * healed (a candidate the structural fallback found), missing, or unused (not needed by this check). The check is
  * healthy, degraded (it works, but on fallback or healed locators) or broken. A passing check confirms the healed
- * overrides it used, which `afrec selectors promote` then turns into a pack entry.
+ * overrides it used, which `sfdemo selectors promote` then turns into a pack entry.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -236,10 +236,10 @@ export function describeDoctor(report) {
     '  elements:',
     ...report.elements.filter(e => e.status !== 'unused').map(e => `    ${icon[e.status]} ${e.name.padEnd(16)} ${e.status}${e.status === 'fallback' ? ` (candidate ${e.index + 1})` : ''}${e.required ? '' : ' '}`),
   ];
-  if (report.healedNow.length) lines.push(`  healed during this check: ${report.healedNow.join(', ')} (saved to .afrec/overrides.json; run afrec doctor again to confirm)`);
-  if (report.confirmed.length) lines.push(`  confirmed healed locators: ${report.confirmed.join(', ')}: run afrec selectors promote`);
+  if (report.healedNow.length) lines.push(`  healed during this check: ${report.healedNow.join(', ')} (saved to .sfdemo/overrides.json; run sfdemo doctor again to confirm)`);
+  if (report.confirmed.length) lines.push(`  confirmed healed locators: ${report.confirmed.join(', ')}: run sfdemo selectors promote`);
   if (report.error) lines.push(`  error: ${report.error}`);
   lines.push(`  details: ${report.dir}`);
-  if (report.status === 'broken') lines.push(`  next: afrec heal ${report.dir}  (a repair bundle for a coding agent)`);
+  if (report.status === 'broken') lines.push(`  next: sfdemo heal ${report.dir}  (a repair bundle for a coding agent)`);
   return lines.join('\n');
 }

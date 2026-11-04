@@ -19,4 +19,4 @@ files as templates for your own scenario.
 | `04-fleet-manager-morning.md` | Lightning panel | fleet manager, Login-As | picking an agent (`agent:`), a plan, a task created after confirmation |
 | `05-batch.csv` | both | several | several conversations in one sheet, run in parallel |
 
-Run them with `afrec run --dry-run` first (or `afrec run examples/ebike --dry-run` from a clone): it shows who signs in where, and what runs in parallel.
+Run them with `sfdemo run --dry-run` first (or `sfdemo run examples/ebike --dry-run` from a clone): it shows who signs in where, and what runs in parallel.

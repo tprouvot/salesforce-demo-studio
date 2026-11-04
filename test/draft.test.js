@@ -1,5 +1,5 @@
 /**
- * `afrec new`: what an agent can do, read from its planner (against the fake sf of helpers/fake-sf.js, POSIX only),
+ * `sfdemo new`: what an agent can do, read from its planner (against the fake sf of helpers/fake-sf.js, POSIX only),
  * the settings and the text of the new scenario, and the command's files, refusals and JSON.
  */
 import { test, before, after } from 'node:test';
@@ -16,11 +16,11 @@ import { resolveConversation } from '../src/scenario/resolve.js';
 import { installFakeSf, fakeSfSupported } from './helpers/fake-sf.js';
 
 const skip = !fakeSfSupported && 'the fake sf CLI needs a POSIX shell';
-const BIN = fileURLToPath(new URL('../bin/afrec.js', import.meta.url));
-const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-draft-')));
+const BIN = fileURLToPath(new URL('../bin/sfdemo.js', import.meta.url));
+const tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-draft-')));
 const fresh = name => { const d = path.join(tmp, name); fs.mkdirSync(d, { recursive: true }); return d; };
-const afrec = (cwd, ...args) => {
-  const r = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8', env: { ...process.env, AFREC_HOME: path.join(tmp, 'home') }, timeout: 60000 });
+const sfdemo = (cwd, ...args) => {
+  const r = spawnSync(process.execPath, [BIN, ...args], { cwd, encoding: 'utf8', env: { ...process.env, SFDEMO_HOME: path.join(tmp, 'home') }, timeout: 60000 });
   return { code: r.status, out: r.stdout, err: r.stderr };
 };
 
@@ -126,7 +126,7 @@ test('draft text: the settings, who signs in, the topics in a comment, and no st
   };
   const text = draftScenario({ file, settings: { surface: 'lightning', org: 'acme', agent: 'Fleet Assistant', user: 'fleet.manager' }, facts, date: '2026-10-27' });
   assert.match(text, /^---\nsurface: lightning\norg: acme\nagent: Fleet Assistant\nuser: fleet\.manager\n---\n# Fleet Assistant\n\n<!--\n/);
-  assert.ok(text.includes(`\n  afrec run --dry-run ${file}\n`), 'a file outside the current folder by its full path');
+  assert.ok(text.includes(`\n  sfdemo run --dry-run ${file}\n`), 'a file outside the current folder by its full path');
   assert.match(text, /\nSigned in: Fleet Manager \(fleet\.manager@acme\.example\), by Login-As from acme\.\n/);
   assert.match(text, /\nFleet Assistant \(version 3, read from acme on 2026-10-27\) can do this:\n\nTopic "Repairs": Tasks -- > for damaged bikes\n {2}Scope: x{299}…\n {2}Action "Create Repair Task" \(asks to confirm: answer it, or click: its button\): Opens a task\n\nOutside any topic:\n {2}Action "Draft Email"\n-->\n$/);
   assert.equal(text.match(/-->/g).length, 1, 'a description cannot close the comment');
@@ -137,27 +137,27 @@ test('draft text: the settings, who signs in, the topics in a comment, and no st
   assert.deepEqual(resolveConversation(written).steps.map(s => s.type), ['message', 'expect']);
   const guest = draftScenario({ file, settings: { surface: 'messaging', site: 'https://x.example.com/' }, facts: { agent: null, topics: null, user: null } });
   assert.match(guest, /Signed in: nobody: a guest visitor\. For a signed-in member of the site, add user: <username> and org: <admin alias> \(Login-As\)\./);
-  assert.match(guest, /Run afrec new again with --org <alias> to list here what the agent can do\.\n-->\n$/);
+  assert.match(guest, /Run sfdemo new again with --org <alias> to list here what the agent can do\.\n-->\n$/);
   assert.throws(() => draftScenario({ file, settings: { surface: 'lightning' }, facts: {} }), /a Lightning conversation needs org:/);
 });
 
-test('afrec new: writes the file, never over one; --json writes nothing; several agents or no site is an error', { skip }, () => {
+test('sfdemo new: writes the file, never over one; --json writes nothing; several agents or no site is an error', { skip }, () => {
   const cwd = fresh('new');
-  fs.writeFileSync(path.join(cwd, 'afrec.config.json'), JSON.stringify({ defaults: { org: 'acme' } }));
+  fs.writeFileSync(path.join(cwd, 'sfdemo.config.json'), JSON.stringify({ defaults: { org: 'acme' } }));
   fake.setRules(fleetOrg());
-  const r = afrec(cwd, 'new', '--user', 'fleet.manager');
+  const r = sfdemo(cwd, 'new', '--user', 'fleet.manager');
   assert.equal(r.code, 0, r.err);
-  assert.equal(r.out, 'wrote scenarios/fleet-assistant.md, with what Fleet Assistant can do: 3 topic(s), 4 action(s)\nnext: write the messages in it, then afrec run --dry-run scenarios/fleet-assistant.md\n');
+  assert.equal(r.out, 'wrote scenarios/fleet-assistant.md, with what Fleet Assistant can do: 3 topic(s), 4 action(s)\nnext: write the messages in it, then sfdemo run --dry-run scenarios/fleet-assistant.md\n');
   const text = fs.readFileSync(path.join(cwd, 'scenarios', 'fleet-assistant.md'), 'utf8');
   assert.match(text, /^---\nsurface: lightning\nagent: Fleet Assistant\nuser: fleet\.manager\n---\n/);
   assert.match(text, /Topic "Station Levels": Bikes and free docks at each station\n {2}Scope: Only stations of the city\. -- > not others\n {2}Action "Get Station Levels": Bikes per station\n/);
-  const plan = afrec(cwd, 'run', '--dry-run');
+  const plan = sfdemo(cwd, 'run', '--dry-run');
   assert.equal(plan.code, 2);
   assert.match(plan.err, /fleet-assistant\.md: "fleet-assistant" has no message to send/);
-  assert.match(afrec(cwd, 'new', '--user', 'fleet.manager').err, /^error: scenarios\/fleet-assistant\.md already exists \(use --force to overwrite\)\n$/);
-  assert.equal(afrec(cwd, 'new', '--force').code, 0);
+  assert.match(sfdemo(cwd, 'new', '--user', 'fleet.manager').err, /^error: scenarios\/fleet-assistant\.md already exists \(use --force to overwrite\)\n$/);
+  assert.equal(sfdemo(cwd, 'new', '--force').code, 0);
 
-  const json = afrec(cwd, 'new', 'rider-extends', '--surface', 'messaging', '--user', 'rider.demo', '--agent', 'Fleet Assistant', '--json');
+  const json = sfdemo(cwd, 'new', 'rider-extends', '--surface', 'messaging', '--user', 'rider.demo', '--agent', 'Fleet Assistant', '--json');
   assert.equal(json.code, 0, json.err);
   const facts = JSON.parse(json.out);
   assert.equal(facts.file, path.join(cwd, 'scenarios', 'rider-extends.md'));
@@ -166,11 +166,11 @@ test('afrec new: writes the file, never over one; --json writes nothing; several
   assert.deepEqual(facts.topics.topics.find(t => t.label === 'Station Levels').instructions, ['Always name the station.', 'Round battery levels.']);
   assert.ok(!fs.existsSync(facts.file), '--json writes nothing');
 
-  const site = afrec(cwd, 'new', '--surface', 'messaging', '--agent', 'Fleet Assistant');
+  const site = sfdemo(cwd, 'new', '--surface', 'messaging', '--agent', 'Fleet Assistant');
   assert.equal(site.code, 2);
   assert.equal(site.err, 'error: a Messaging scenario needs --site <url>: the page where the chat widget loads (Fleet Assistant is an employee agent: --surface lightning?)\n');
   fake.setRules(fleetOrg({ agents: [FLEET, { ...FLEET, DeveloperName: 'Depot_Helper', MasterLabel: 'Depot Helper' }, RIDERS] }));
-  const several = afrec(cwd, 'new', '--surface', 'lightning');
+  const several = sfdemo(cwd, 'new', '--surface', 'lightning');
   assert.match(several.err, /error: acme has 2 active employee agents \(Fleet Assistant; Depot Helper\): pass --agent <label>/);
-  assert.match(afrec(fresh('new-none'), 'new').err, /give --org <alias> \(the org of the agent\), or --site <url> for a guest on a website/);
+  assert.match(sfdemo(fresh('new-none'), 'new').err, /give --org <alias> \(the org of the agent\), or --site <url> for a guest on a website/);
 });

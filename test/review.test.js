@@ -34,7 +34,7 @@ function png(width, height, pixel) {
 }
 
 test('capture: blank screenshots, a question outside the crop, a video that was not cut', () => {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-png-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-png-'));
   const blank = path.join(dir, 'blank.png');
   const busy = path.join(dir, 'busy.png');
   fs.writeFileSync(blank, png(800, 1600, () => [255, 255, 255]));
@@ -78,7 +78,7 @@ test('input: answered live, or by the file drop, or not at all', async () => {
   const live = broker.request({ conversation: 'Rider', n: 3, label: 'one-time code', timeout: 5000 });
   assert.equal(broker.answer(asked[0].id, ' 123456 '), true);
   assert.equal(await live, '123456');
-  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-in-')), 'code.txt');
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-in-')), 'code.txt');
   const dropped = broker.request({ conversation: 'Rider', n: 4, file, timeout: 5000 });
   fs.writeFileSync(file, '654321\n');
   assert.equal(await dropped, '654321');

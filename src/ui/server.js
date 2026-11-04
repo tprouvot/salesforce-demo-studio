@@ -1,10 +1,10 @@
 /**
- * afrec ui: a local web server for the project. It edits scenario files, starts runs and doctor checks with the
+ * sfdemo ui: a local web server for the project. It edits scenario files, starts runs and doctor checks with the
  * same engine as the CLI, streams their progress (server-sent events), answers type-from prompts, and serves the
  * recordings.
  *
  * Security: it listens on 127.0.0.1 only (by default); the printed URL carries a random token that becomes an
- * HttpOnly cookie; every request needs it, changes also need it in the X-Afrec-Token header (so no other site can
+ * HttpOnly cookie; every request needs it, changes also need it in the X-Sfdemo-Token header (so no other site can
  * trigger one), and the Host header must be the server's own (no DNS rebinding). Passwords never go through it: the
  * development-only credentials files are picked by path and only their usernames are listed.
  */
@@ -219,13 +219,13 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
       if (req.headers.host !== expectedHost && req.headers.host !== expectedHost.replace('127.0.0.1', 'localhost')) return send(421, 'wrong host');
       const cookie = Object.fromEntries(String(req.headers.cookie || '').split(';').map(c => c.trim().split('=')).filter(p => p.length === 2));
       if (url.pathname === '/' && url.searchParams.get('token') === token) {
-        return send(302, '', { Location: '/', 'Set-Cookie': `afrec_token=${token}; HttpOnly; SameSite=Strict; Path=/` });
+        return send(302, '', { Location: '/', 'Set-Cookie': `sfdemo_token=${token}; HttpOnly; SameSite=Strict; Path=/` });
       }
-      if (cookie.afrec_token !== token) return send(401, 'Open the link afrec ui printed (it carries the access token).', { 'Content-Type': 'text/plain; charset=utf-8' });
-      if (req.method !== 'GET' && req.headers['x-afrec-token'] !== token) return send(403, { error: 'missing X-Afrec-Token' });
+      if (cookie.sfdemo_token !== token) return send(401, 'Open the link sfdemo ui printed (it carries the access token).', { 'Content-Type': 'text/plain; charset=utf-8' });
+      if (req.method !== 'GET' && req.headers['x-sfdemo-token'] !== token) return send(403, { error: 'missing X-Sfdemo-Token' });
 
       if (url.pathname === '/' || url.pathname === '/index.html') {
-        const html = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8').replace('__AFREC_TOKEN__', token);
+        const html = fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8').replace('__SFDEMO_TOKEN__', token);
         return send(200, html, { 'Content-Type': TYPES['.html'], 'Content-Security-Policy': "default-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'" });
       }
       if (url.pathname.startsWith('/static/')) {

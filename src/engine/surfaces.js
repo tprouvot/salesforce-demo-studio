@@ -78,7 +78,7 @@ class Surface {
     const frame = await this.chatFrame();
     const found = await frame.evaluate(healChat, { sentText }).catch(() => null);
     if (!found || !found.agentText) return null;
-    this.log(`the chat markup changed: found the messages by structure (${found.evidence.marker} / ${found.evidence.mirrored}); saved to .afrec/overrides.json`);
+    this.log(`the chat markup changed: found the messages by structure (${found.evidence.marker} / ${found.evidence.mirrored}); saved to .sfdemo/overrides.json`);
     this.applyHeal({ userText: found.userText, agentText: found.agentText }, found.evidence);
     return found;
   }
@@ -90,7 +90,7 @@ class Surface {
     const guess = await findVisible(scopes, TEXT_BOX, { last: true });
     if (!guess) return null;
     const candidate = TEXT_BOX[guess.index];
-    this.log(`no input candidate matched: using the chat's ${candidate.css || 'textbox'} (saved to .afrec/overrides.json)`);
+    this.log(`no input candidate matched: using the chat's ${candidate.css || 'textbox'} (saved to .sfdemo/overrides.json)`);
     this.applyHeal({ input: [candidate] }, { element: 'input' });
     return guess.locator;
   }
@@ -165,7 +165,7 @@ export class Lightning extends Surface {
     if (!hit) return null;
     const name = ((await hit.locator.getAttribute('aria-label').catch(() => null)) || (await hit.locator.innerText().catch(() => '')) || '').trim();
     const healed = name ? { role: 'button', name: `^${escapeRe(name)}$` } : loose;
-    this.log(`no launcher candidate matched: using the header button "${name}" (saved to .afrec/overrides.json)`);
+    this.log(`no launcher candidate matched: using the header button "${name}" (saved to .sfdemo/overrides.json)`);
     this.applyHeal({ launcher: [healed] }, { element: 'launcher', name });
     return hit;
   }
@@ -305,7 +305,7 @@ export class Messaging extends Surface {
     const hit = await findVisible([frame], [loose]);
     if (!hit) return null;
     const name = ((await hit.locator.getAttribute('aria-label').catch(() => null)) || (await hit.locator.innerText().catch(() => '')) || '').trim();
-    this.log(`no launcher candidate matched: using the frame's button "${name}" (saved to .afrec/overrides.json)`);
+    this.log(`no launcher candidate matched: using the frame's button "${name}" (saved to .sfdemo/overrides.json)`);
     this.applyHeal({ launcher: [name ? { role: 'button', name: `^${escapeRe(name)}$` } : loose] }, { element: 'launcher', name });
     return hit;
   }

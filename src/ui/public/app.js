@@ -1,10 +1,10 @@
 /*
- * The afrec UI: edit scenarios (form or Markdown), run them with live progress, answer type-from prompts, browse
+ * The sfdemo UI: edit scenarios (form or Markdown), run them with live progress, answer type-from prompts, browse
  * recordings, run the doctor. Everything goes through the local server's /api; text from the org is set as text.
  */
 (function () {
-  const { h, renderRun, checkChip } = window.AfrecRender;
-  const token = /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="afrec-token"]')).content;
+  const { h, renderRun, checkChip } = window.SfdemoRender;
+  const token = /** @type {HTMLMetaElement} */ (document.querySelector('meta[name="sfdemo-token"]')).content;
   const main = document.getElementById('view');
   // each navigation renders into its own container: a view that finishes late writes into a detached one
   let view = main;
@@ -12,7 +12,7 @@
   const status = document.getElementById('status');
 
   async function api(method, url, body) {
-    const res = await fetch(url, { method, headers: { 'X-Afrec-Token': token, ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+    const res = await fetch(url, { method, headers: { 'X-Sfdemo-Token': token, ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || res.statusText);
     return data;
@@ -42,7 +42,7 @@
       live.log.push(`${e.conversation ? `[${e.conversation}] ` : ''}${e.message}`);
     }
     if (e.type === 'warning') live.log.push(`warning: ${e.message}`);
-    if (e.type === 'heal') live.log.push(`[${e.conversation}] healed ${e.elements.join(', ')} (saved to .afrec/overrides.json)`);
+    if (e.type === 'heal') live.log.push(`[${e.conversation}] healed ${e.elements.join(', ')} (saved to .sfdemo/overrides.json)`);
     if (e.type === 'input-request' && !e.replay) askInput(e);
     if (e.type === 'input-resolved') closeInput(e.id);
     if (e.type === 'done') { live.status = e.error ? 'failed' : 'done'; live.done = e; if (e.error) live.log.push(`error: ${e.error}`); if (!e.replay) toast(e.kind === 'run' ? (e.error ? 'The run failed' : 'The run is finished') : 'The doctor is finished', e.error ? 'bad' : 'warn'); }
@@ -322,7 +322,7 @@
           h('td', {}, h('a', { href: `#/runs/${encodeURIComponent(r.id)}` }, r.startedAt ? new Date(r.startedAt).toLocaleString() : r.id), r.baseline ? ' ' : null, r.baseline ? h('span', { class: 'pill same' }, 'baseline') : null),
           h('td', { class: 'muted' }, (r.names || []).join(', ')),
           h('td', {}, r.recorded ?? ''), h('td', {}, r.flagged ?? ''), h('td', {}, r.failed ?? ''),
-          h('td', { class: 'muted' }, r.durationMs ? window.AfrecRender.minutes(r.durationMs) : ''),
+          h('td', { class: 'muted' }, r.durationMs ? window.SfdemoRender.minutes(r.durationMs) : ''),
           h('td', {}, h('a', { class: 'btn', href: `#/runs/${encodeURIComponent(r.id)}` }, 'Open')))))) : h('div', { class: 'empty' }, 'No recording yet: go to Run.')));
   }
 

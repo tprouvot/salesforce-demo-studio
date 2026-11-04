@@ -1,7 +1,7 @@
 /**
  * What a run writes and plans: transcripts, report.md / report.json / report.html, the dry-run plan, and the pool that
  * runs conversations in parallel without two of the same identity at once. The last test runs executeRun itself
- * (Chromium, skipped without it unless AFREC_REQUIRE_BROWSER=1).
+ * (Chromium, skipped without it unless SFDEMO_REQUIRE_BROWSER=1).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,9 +17,9 @@ import { resolveAll, assignFolders } from '../src/scenario/resolve.js';
 import { loadProject } from '../src/config.js';
 import { makeRun, result } from './helpers/runs.js';
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-report-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-report-'));
 const hasBrowser = fs.existsSync(chromium.executablePath());
-if (!hasBrowser && process.env.AFREC_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
+if (!hasBrowser && process.env.SFDEMO_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 test('durations: seconds, then minutes and seconds', () => {
@@ -126,7 +126,7 @@ test('the pool: at most `limit` at once, never two of one identity at once, resu
 test('planning: the project\'s scenarios by default, --only filters and names the missing ones', () => {
   const root = fs.mkdtempSync(path.join(tmp, 'planrun-'));
   fs.mkdirSync(path.join(root, 'scenarios'));
-  fs.writeFileSync(path.join(root, 'afrec.config.json'), JSON.stringify({ defaults: { site: 'https://riders.example.com/s/' } }));
+  fs.writeFileSync(path.join(root, 'sfdemo.config.json'), JSON.stringify({ defaults: { site: 'https://riders.example.com/s/' } }));
   fs.writeFileSync(path.join(root, 'scenarios', 'a.md'), '1. Hi\n');
   fs.writeFileSync(path.join(root, 'scenarios', 'b.md'), '1. Hi\n');
   const project = loadProject({ dir: root });
@@ -141,7 +141,7 @@ test('a whole run: a failing conversation is reported, the baseline compared, an
   const root = fs.realpathSync(fs.mkdtempSync(path.join(tmp, 'execute-')));
   let git = true;
   try { execFileSync('git', ['init', '-q'], { cwd: root, stdio: 'ignore' }); } catch { git = false; }
-  fs.writeFileSync(path.join(root, 'afrec.config.json'), JSON.stringify({ baseline: '20261020-100000' }));
+  fs.writeFileSync(path.join(root, 'sfdemo.config.json'), JSON.stringify({ baseline: '20261020-100000' }));
   fs.writeFileSync(path.join(root, 'creds.txt'), 'someone@x.example pw\n');
   fs.mkdirSync(path.join(root, 'scenarios'));
   fs.writeFileSync(path.join(root, 'scenarios', 'Fleet.md'), '---\nsurface: lightning\nlogin url: https://login.example.invalid\nuser: ghost\ncredentials: ../creds.txt\n---\n1. Hi\n');

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Fails when a file of the repository mentions a denylisted term (customer names, program names, org domains,
- * agent names): the terms live outside the repository, in .afrec/denylist.txt (gitignored) or
- * ~/.afrec/denylist.txt, one per line.
+ * agent names): the terms live outside the repository, in .sfdemo/denylist.txt (gitignored) or
+ * ~/.sfdemo/denylist.txt, one per line.
  *
  *   node scripts/check-denylist.js            every tracked or new file
  *   node scripts/check-denylist.js --staged   the staged content only (what the pre-commit hook runs)
@@ -13,6 +13,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { loadDenylist } from '../src/denylist.js';
 import { denylistHits } from '../src/doctor/redact.js';
+import { stateDirOf } from '../src/config.js';
 
 const root = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
 const args = process.argv.slice(2);
@@ -24,9 +25,9 @@ if (args.includes('--install')) {
   process.exit(0);
 }
 
-const terms = loadDenylist(path.join(root, '.afrec'));
+const terms = loadDenylist(stateDirOf(root));
 if (!terms.length) {
-  console.log('no denylist (.afrec/denylist.txt or ~/.afrec/denylist.txt): nothing to check');
+  console.log('no denylist (.sfdemo/denylist.txt or ~/.sfdemo/denylist.txt): nothing to check');
   process.exit(0);
 }
 const staged = args.includes('--staged');

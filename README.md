@@ -1,6 +1,6 @@
-# Agentforce conversation recorder (`afrec`)
+# Agentforce conversation recorder (`sfdemo`)
 
-Records Agentforce conversations for you. You write the questions in a small text file; `afrec` types them in a
+Records Agentforce conversations for you. You write the questions in a small text file; `sfdemo` types them in a
 real browser, waits for each answer, and gives you a screenshot per answer, an MP4, a GIF, a transcript and an
 HTML report. It works on the **Lightning Agentforce panel** and on **Embedded Messaging** chat widgets (as a guest
 or a signed-in user), from the command line or from a local web page.
@@ -9,7 +9,7 @@ No AI at record time: nothing to configure, no tokens spent, the same script pla
 
 ## Install
 
-> **Not on npm yet.** `npm install --global agentforce-conversation-recorder` does not work for now: install it
+> **Not on npm yet.** `npm install --global salesforce-demo-studio` does not work for now: install it
 > from GitHub as below.
 
 You need [Node.js](https://nodejs.org) 20 or later, git, and the
@@ -22,14 +22,14 @@ sf org login web --alias myOrg
 Then, once:
 
 ```sh
-git clone https://github.com/tprouvot/agentforce-conversation-recorder.git
-cd agentforce-conversation-recorder
+git clone https://github.com/tprouvot/salesforce-demo-studio.git
+cd salesforce-demo-studio
 npm install
-npm link             # makes the afrec command available in every folder
-afrec setup          # installs the browser afrec drives, checks ffmpeg and the sf CLI
+npm link             # makes the sfdemo command available in every folder
+sfdemo setup          # installs the browser sfdemo drives, checks ffmpeg and the sf CLI
 ```
 
-To update later: `git pull && npm install` in that folder. To remove: `npm unlink --global agentforce-conversation-recorder`.
+To update later: `git pull && npm install` in that folder. To remove: `npm unlink --global salesforce-demo-studio`.
 
 ## Record your first conversation
 
@@ -37,16 +37,16 @@ To update later: `git pull && npm install` in that folder. To remove: `npm unlin
 
 ```sh
 mkdir my-demo && cd my-demo
-afrec init --org myOrg --example none    # afrec.config.json (myOrg by default), an empty scenarios/ folder
+sfdemo init --org myOrg --example none    # sfdemo.config.json (myOrg by default), an empty scenarios/ folder
 ```
 
-**2. Start a scenario.** `afrec new` finds your agent in the org and writes `scenarios/<agent>.md`, with what the
+**2. Start a scenario.** `sfdemo new` finds your agent in the org and writes `scenarios/<agent>.md`, with what the
 agent can do (its topics and actions) in a comment, to give you ideas:
 
 ```sh
-afrec new                                  # the Agentforce panel in Lightning, as you
-afrec new --user jordan.lee                # the same, logged in as another user (Login-As)
-afrec new --site https://<your-site>/      # the chat widget on a site, as a guest
+sfdemo new                                  # the Agentforce panel in Lightning, as you
+sfdemo new --user jordan.lee                # the same, logged in as another user (Login-As)
+sfdemo new --site https://<your-site>/      # the chat widget on a site, as a guest
 ```
 
 Several agents in the org? Add `--agent "<agent name>"`.
@@ -65,14 +65,14 @@ checks on its answer. For example:
 **4. Check, then record:**
 
 ```sh
-afrec run --dry-run      # who signs in where, what will run; sends nothing
-afrec run                # records every scenario in scenarios/, and prints where the report is
+sfdemo run --dry-run      # who signs in where, what will run; sends nothing
+sfdemo run                # records every scenario in scenarios/, and prints where the report is
 ```
 
 Open the `report.html` it prints. Each message spends agent credits and can run real actions (records created,
 emails sent): don't script what you don't want to happen.
 
-Prefer clicking? `afrec ui` does the same in your browser: write scenarios, run them, watch the progress, browse
+Prefer clicking? `sfdemo ui` does the same in your browser: write scenarios, run them, watch the progress, browse
 the recordings.
 
 ## Let a coding agent write the scenarios
@@ -111,7 +111,7 @@ conversation, the run goes on.
 
 Everything is in [docs/SCENARIOS.md](docs/SCENARIOS.md). [examples/ebike/](examples/ebike/) is a complete demo:
 guests, a signed-in rider with a one-time code, a hand-off to a person, a fleet manager in Lightning, a CSV batch
-(`afrec init` without `--example none` copies it into `scenarios/`).
+(`sfdemo init` without `--example none` copies it into `scenarios/`).
 
 ### Who gets signed in
 
@@ -130,22 +130,22 @@ Login-As needs "Administrators Can Log in as Any User" (Setup > Login Access Pol
 
 | Command | What it does |
 | --- | --- |
-| `afrec init` | a new project folder: `afrec.config.json`, `scenarios/`, `.gitignore` entries |
-| `afrec new [name]` | a scenario to start from: settings checked in the org, the agent's topics and actions listed in it; `--json` prints them |
-| `afrec run [files]` | record (default: every scenario in `scenarios/`); `--dry-run`, `--only <name>`, `--headed` to watch |
-| `afrec ui` | the local web UI |
-| `afrec doctor` | is everything in place? prerequisites, a test conversation, and every element of the chat |
-| `afrec heal` | after a broken doctor check: a repair bundle for a coding agent |
-| `afrec selectors list \| update \| promote \| check` | the chat locators: see them, download fixes, keep healed ones, validate a pack |
-| `afrec fixtures test \| add` | replay the offline test pages; turn a doctor snapshot into one |
-| `afrec baseline set <run>`, `afrec compare <run>` | compare two runs: what changed in each answer, timing, flags |
-| `afrec setup`, `afrec orgs` | install and check the prerequisites; list the sf CLI's orgs |
+| `sfdemo init` | a new project folder: `sfdemo.config.json`, `scenarios/`, `.gitignore` entries |
+| `sfdemo new [name]` | a scenario to start from: settings checked in the org, the agent's topics and actions listed in it; `--json` prints them |
+| `sfdemo run [files]` | record (default: every scenario in `scenarios/`); `--dry-run`, `--only <name>`, `--headed` to watch |
+| `sfdemo ui` | the local web UI |
+| `sfdemo doctor` | is everything in place? prerequisites, a test conversation, and every element of the chat |
+| `sfdemo heal` | after a broken doctor check: a repair bundle for a coding agent |
+| `sfdemo selectors list \| update \| promote \| check` | the chat locators: see them, download fixes, keep healed ones, validate a pack |
+| `sfdemo fixtures test \| add` | replay the offline test pages; turn a doctor snapshot into one |
+| `sfdemo baseline set <run>`, `sfdemo compare <run>` | compare two runs: what changed in each answer, timing, flags |
+| `sfdemo setup`, `sfdemo orgs` | install and check the prerequisites; list the sf CLI's orgs |
 
-`afrec --help` lists every option.
+`sfdemo --help` lists every option.
 
 ## Configuration
 
-`afrec.config.json` (schema: [schema/config.schema.json](schema/config.schema.json)):
+`sfdemo.config.json` (schema: [schema/config.schema.json](schema/config.schema.json)):
 
 ```json
 {
@@ -163,16 +163,16 @@ Login-As needs "Administrators Can Log in as Any User" (Setup > Login Access Pol
 
 ## Staying ahead of Salesforce releases
 
-Salesforce changes the chat's markup with its releases. `afrec` keeps its locators as versioned data with a
+Salesforce changes the chat's markup with its releases. `sfdemo` keeps its locators as versioned data with a
 self-healing fallback, and its doctor checks an org (a preview sandbox before a release, for example):
 
 ```sh
-afrec doctor --org myPreviewSandbox           # the Lightning panel
-afrec doctor --site https://.../rides/        # a widget (add --org for its release)
+sfdemo doctor --org myPreviewSandbox           # the Lightning panel
+sfdemo doctor --site https://.../rides/        # a widget (add --org for its release)
 ```
 
-Healthy: keep the snapshot as a regression fixture (`afrec fixtures add`). Degraded or broken: `afrec heal` writes
-a bundle a coding agent can fix offline; a merged fix reaches everyone with `afrec selectors update`. Why and how:
+Healthy: keep the snapshot as a regression fixture (`sfdemo fixtures add`). Degraded or broken: `sfdemo heal` writes
+a bundle a coding agent can fix offline; a merged fix reaches everyone with `sfdemo selectors update`. Why and how:
 [docs/RELEASE-PROOF.md](docs/RELEASE-PROOF.md).
 
 ## As a library
@@ -180,7 +180,7 @@ a bundle a coding agent can fix offline; a merged fix reaches everyone with `afr
 Everything the CLI does is importable, for scripts, CI, or a future `sf agent record` plugin:
 
 ```js
-import { loadProject, planRun, executeRun } from 'agentforce-conversation-recorder';
+import { loadProject, planRun, executeRun } from 'salesforce-demo-studio';
 
 const project = loadProject();
 const { conversations, errors } = planRun({ project, inputs: ['scenarios/'] });
@@ -189,13 +189,13 @@ const { results, out } = await executeRun(conversations, { project, emit: e => c
 
 ## Privacy and security
 
-- Recordings show org data: they go to `.local/` (gitignored by `afrec init`); the run warns when they are not
+- Recordings show org data: they go to `.local/` (gitignored by `sfdemo init`); the run warns when they are not
   ignored.
 - The UI listens on 127.0.0.1 only, behind a one-time token; changes need the token in a header, and the Host
   header is checked. Passwords never go through it.
 - Frontdoor and Login-As URLs carry sessions: they are never printed or written.
 - Doctor snapshots are redacted before they are written (structure and UI labels only), and checked against your
-  local denylist of names that must never be published (`.afrec/denylist.txt`, one term per line).
+  local denylist of names that must never be published (`.sfdemo/denylist.txt`, one term per line).
 
 ## Development
 

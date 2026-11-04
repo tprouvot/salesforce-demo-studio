@@ -106,7 +106,7 @@ export async function runConversation(browser, conv, ctx) {
           if (!result.selectors.healed.includes(name)) result.selectors.healed.push(name);
           result.selectors.healedNow.push(name);
         }
-        result.warnings.push(`healed ${Object.keys(elements).join(', ')} by structure (${JSON.stringify(evidence)}): saved to .afrec/overrides.json`);
+        result.warnings.push(`healed ${Object.keys(elements).join(', ')} by structure (${JSON.stringify(evidence)}): saved to .sfdemo/overrides.json`);
         emit({ type: 'heal', conversation: conv.name, surface: conv.surface, elements: Object.keys(elements) });
       },
     });

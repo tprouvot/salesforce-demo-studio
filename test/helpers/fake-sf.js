@@ -12,8 +12,8 @@ export const fakeSfSupported = process.platform !== 'win32';
 const SCRIPT = `
 import fs from 'node:fs';
 const args = process.argv.slice(2);
-fs.appendFileSync(process.env.AFREC_FAKE_SF_LOG, JSON.stringify(args) + '\\n');
-const rules = JSON.parse(fs.readFileSync(process.env.AFREC_FAKE_SF_RULES, 'utf8'));
+fs.appendFileSync(process.env.SFDEMO_FAKE_SF_LOG, JSON.stringify(args) + '\\n');
+const rules = JSON.parse(fs.readFileSync(process.env.SFDEMO_FAKE_SF_RULES, 'utf8'));
 const line = args.join(' ');
 const rule = rules.find(r => new RegExp(r.match).test(line));
 if (!rule) { process.stdout.write(JSON.stringify({ status: 1, name: 'NoRule', message: 'fake sf: no rule for ' + line })); process.exit(1); }
@@ -27,16 +27,16 @@ process.stdout.write(JSON.stringify({ status: 0, result: rule.result }));
  * @param {any[]} rules
  */
 export function installFakeSf(rules = []) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-sf-'));
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-sf-'));
   const log = path.join(dir, 'calls.jsonl');
   const rulesFile = path.join(dir, 'rules.json');
   fs.writeFileSync(path.join(dir, 'sf.mjs'), SCRIPT);
   fs.writeFileSync(path.join(dir, 'sf'), `#!/bin/sh\nexec "${process.execPath}" "${path.join(dir, 'sf.mjs')}" "$@"\n`, { mode: 0o755 });
   fs.writeFileSync(log, '');
-  const saved = { PATH: process.env.PATH, AFREC_FAKE_SF_LOG: process.env.AFREC_FAKE_SF_LOG, AFREC_FAKE_SF_RULES: process.env.AFREC_FAKE_SF_RULES };
+  const saved = { PATH: process.env.PATH, SFDEMO_FAKE_SF_LOG: process.env.SFDEMO_FAKE_SF_LOG, SFDEMO_FAKE_SF_RULES: process.env.SFDEMO_FAKE_SF_RULES };
   process.env.PATH = dir + path.delimiter + process.env.PATH;
-  process.env.AFREC_FAKE_SF_LOG = log;
-  process.env.AFREC_FAKE_SF_RULES = rulesFile;
+  process.env.SFDEMO_FAKE_SF_LOG = log;
+  process.env.SFDEMO_FAKE_SF_RULES = rulesFile;
   const fake = {
     dir,
     /** Replaces the rules (later calls see the new ones). */

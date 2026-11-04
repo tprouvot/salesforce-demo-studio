@@ -42,9 +42,9 @@ test('the pack for a release: the highest minApiVersion at or below it', () => {
 });
 
 test('healed overrides go first, are flagged, and promote into a pack once confirmed', () => {
-  const state = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-state-'));
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-home-'));
-  process.env.AFREC_HOME = home;
+  const state = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-state-'));
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-home-'));
+  process.env.SFDEMO_HOME = home;
   try {
     recordHealing(state, 'lightning', { userText: [{ class: 'cx-msg--outgoing' }] }, { apiVersion: 70, packVersion: '2026.10.1' });
     const pack = effectivePack('lightning', 70, state);
@@ -62,7 +62,7 @@ test('healed overrides go first, are flagged, and promote into a pack once confi
     assert.equal(r.inToolRepo, false);
     assert.ok(fs.existsSync(path.join(home, 'packs', 'lightning.json')));
   } finally {
-    delete process.env.AFREC_HOME;
+    delete process.env.SFDEMO_HOME;
   }
 });
 
@@ -91,8 +91,8 @@ test('selectors update: newer valid packs are saved, the rest is reported (up to
   });
   await new Promise(r => server.listen(0, '127.0.0.1', () => r(undefined)));
   const { port } = /** @type {any} */ (server.address());
-  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-home-'));
-  process.env.AFREC_HOME = home;
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-home-'));
+  process.env.SFDEMO_HOME = home;
   try {
     const url = `http://127.0.0.1:${port}/packs`; // no trailing slash: added
     const r = await updatePacks(url);
@@ -107,12 +107,12 @@ test('selectors update: newer valid packs are saved, the rest is reported (up to
     assert.deepEqual(fs.readdirSync(path.join(home, 'packs')).sort(), ['lightning.json', 'lightning@v70.json']);
     assert.equal(effectivePack('lightning', 66, null).version, '2099.1.1', 'the downloaded pack wins over the bundled one');
     assert.equal(selectPack('lightning', 70).id, 'lightning@v70');
-    const status = packStatus({ stateDir: fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-state-')) });
+    const status = packStatus({ stateDir: fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-state-')) });
     assert.ok(status.packs.some(p => p.id === 'lightning@v70' && p.origin !== 'bundled'));
     assert.deepEqual(checkPackFile(path.join(home, 'packs', 'lightning@v70.json')).problems, []);
     await assert.rejects(updatePacks(`http://127.0.0.1:${port}/nowhere/`), /nowhere\/index\.json: HTTP 404/);
   } finally {
-    delete process.env.AFREC_HOME;
+    delete process.env.SFDEMO_HOME;
     server.close();
   }
 });

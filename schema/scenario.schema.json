@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/tprouvot/agentforce-conversation-recorder/schema/scenario.schema.json",
+  "$id": "https://github.com/tprouvot/salesforce-demo-studio/schema/scenario.schema.json",
   "title": "Agentforce conversation scenario",
   "description": "One conversation: its settings (the front matter of a .md file, or the setting columns of a .csv file) and its steps.",
   "type": "object",

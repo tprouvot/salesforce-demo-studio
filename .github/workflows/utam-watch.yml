@@ -2,7 +2,7 @@ name: utam-watch
 
 # Early warning: Salesforce updates its UTAM page objects (salesforce-pageobjects) for each release. When the
 # Agentforce panel's page objects change, or drop a selector the Lightning pack relies on, this opens (or updates)
-# an issue: run afrec doctor on a preview sandbox before the release reaches production orgs.
+# an issue: run sfdemo doctor on a preview sandbox before the release reaches production orgs.
 
 on:
   schedule:

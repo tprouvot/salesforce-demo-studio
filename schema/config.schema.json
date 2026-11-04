@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/tprouvot/agentforce-conversation-recorder/schema/config.schema.json",
-  "title": "afrec project configuration (afrec.config.json)",
+  "$id": "https://github.com/tprouvot/salesforce-demo-studio/schema/config.schema.json",
+  "title": "sfdemo project configuration (sfdemo.config.json)",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -27,6 +27,6 @@
         "canary": { "type": "array", "items": { "type": "string" }, "minItems": 1, "description": "Messages the doctor sends. Default: [\"Hi\", \"What can you help me with?\"]" }
       }
     },
-    "packsUrl": { "type": "string", "format": "uri", "description": "Where `afrec selectors update` downloads selector packs (a folder holding index.json)." }
+    "packsUrl": { "type": "string", "format": "uri", "description": "Where `sfdemo selectors update` downloads selector packs (a folder holding index.json)." }
   }
 }

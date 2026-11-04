@@ -7,7 +7,7 @@
  * (scripts/utam-baseline.json):
  *
  *   - a pack candidate taken from UTAM (source: "utam") that UTAM no longer has: the panel changed, review the pack
- *   - the panel's selectors changed since the baseline: Salesforce reworked the panel, run afrec doctor on a preview
+ *   - the panel's selectors changed since the baseline: Salesforce reworked the panel, run sfdemo doctor on a preview
  *     sandbox
  *
  * Exit code: 0 nothing changed, 1 something to review (the weekly GitHub Action opens an issue), 2 error.
@@ -28,7 +28,7 @@ const markdown = args.includes('--markdown');
 const sh = (cmd, a, cwd) => execFileSync(cmd, a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], shell: process.platform === 'win32' }).trim();
 
 function download() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-utam-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-utam-'));
   const wanted = (args.find(a => a.startsWith('--version=')) || '').split('=')[1];
   const versions = wanted ? [wanted] : JSON.parse(sh('npm', ['view', 'salesforce-pageobjects', 'versions', '--json'])).reverse();
   for (const v of versions.slice(0, 5)) { // a registry with a minimum release age refuses the newest ones: try older
@@ -77,7 +77,7 @@ function main() {
     `pack ${pack.id} ${pack.version} takes ${fromUtam.length} candidate(s) from UTAM${gone.length ? `; ${gone.length} no longer in UTAM:` : ', all still in UTAM'}`,
     ...gone.map(c => `  - ${c.name}: ${c.css}`),
   ];
-  if (changed) lines.push('', 'Salesforce changed the panel\'s page objects: run `afrec doctor` on a preview sandbox, then `afrec heal` if anything is missing.');
+  if (changed) lines.push('', 'Salesforce changed the panel\'s page objects: run `sfdemo doctor` on a preview sandbox, then `sfdemo heal` if anything is missing.');
   console.log(markdown ? `## UTAM watch\n\n${lines.map(l => (l.startsWith('  - ') ? l.trim() : l)).join('\n\n')}\n` : lines.join('\n'));
   if (args.includes('--update')) {
     fs.writeFileSync(BASELINE, JSON.stringify({ version, hash, relied, reviewedAt: new Date().toISOString().slice(0, 10) }, null, 2) + '\n');

@@ -1,5 +1,5 @@
 /**
- * The afrec commands. Each returns its exit code: 0 fine, 1 something failed or is degraded, 2 bad input or broken.
+ * The sfdemo commands. Each returns its exit code: 0 fine, 1 something failed or is degraded, 2 bad input or broken.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,9 +25,9 @@ import { loadDenylist } from '../denylist.js';
 const require = createRequire(import.meta.url);
 const VERSION = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, 'package.json'), 'utf8')).version;
 
-const HELP = `afrec ${VERSION}: records scripted Agentforce conversations (screenshots, MP4, GIF, transcript). No AI at run time.
+const HELP = `sfdemo ${VERSION}: records scripted Agentforce conversations (screenshots, MP4, GIF, transcript). No AI at run time.
 
-Usage: afrec <command> [options]
+Usage: sfdemo <command> [options]
 
   run [files|folders]     record conversations (default: the project's scenarios folder)
         --dry-run  --parallel <n>  --out <dir>  --only <name,...>  --headed
@@ -51,7 +51,7 @@ Usage: afrec <command> [options]
   init [--org <alias>] [--example ebike|none] [--force]
   orgs                    the orgs the sf CLI knows
 
-  --config <file>         use this afrec.config.json (default: found upward from the current folder)
+  --config <file>         use this sfdemo.config.json (default: found upward from the current folder)
   --version, --help
 `;
 
@@ -101,7 +101,7 @@ async function run(argv) {
     out(`\n${results.length - failed} of ${results.length} recorded${flagged ? `, ${flagged} flagged` : ''}${failed ? `, ${failed} failed` : ''}.`);
     if (report.comparison) out(summarizeComparison(report.comparison));
     const healed = [...new Set(results.flatMap(r => (r.selectors ? r.selectors.healed : [])))];
-    if (healed.length) out(`Running on healed locators (${healed.join(', ')}): run afrec doctor, then afrec selectors promote.`);
+    if (healed.length) out(`Running on healed locators (${healed.join(', ')}): run sfdemo doctor, then sfdemo selectors promote.`);
     out(`Report: ${path.join(dir, 'report.html')}`);
     return failed ? 1 : 0;
   } finally {
@@ -127,7 +127,7 @@ async function newScenario(argv) {
   const rel = shownPath(file);
   const t = facts.topics;
   out(`wrote ${rel}${t ? `, with what ${facts.agent.label} can do: ${t.topics.length} topic(s), ${t.topics.reduce((n, x) => n + x.actions.length, t.actions.length)} action(s)` : ''}`);
-  out(`next: write the messages in it, then afrec run --dry-run ${rel}`);
+  out(`next: write the messages in it, then sfdemo run --dry-run ${rel}`);
   return 0;
 }
 
@@ -136,7 +136,7 @@ async function ui(argv) {
   const project = loadProject({ file: args.config });
   const { startServer } = await import('../ui/server.js');
   const server = await startServer({ project, port: args.port || 4477, host: args.host || '127.0.0.1' });
-  out(`afrec UI for ${project.dir}\n  ${server.url}\n(only this machine can open it; the link carries a one-time token. Ctrl+C to stop)`);
+  out(`sfdemo UI for ${project.dir}\n  ${server.url}\n(only this machine can open it; the link carries a one-time token. Ctrl+C to stop)`);
   if (!args['no-open']) openBrowser(server.url);
   await new Promise(() => {});
   return 0;
@@ -165,7 +165,7 @@ export function doctorTargets(project, args) {
   if (s.org && !s.site) targets.push({ settings: { ...s, surface: 'lightning' } });
   else if (s.org) targets.push({ settings: { org: s.org, agent: s.agent, surface: 'lightning' } });
   if (s.site) targets.push({ settings: { site: s.site, org: s.org, surface: 'messaging', ...(s.user && !targets.length ? { user: s.user } : {}) } });
-  if (!targets.length) throw new Error('nothing to check: give a scenario file, --org (Lightning) and/or --site (Messaging), or set defaults in afrec.config.json');
+  if (!targets.length) throw new Error('nothing to check: give a scenario file, --org (Lightning) and/or --site (Messaging), or set defaults in sfdemo.config.json');
   return targets;
 }
 
@@ -186,9 +186,9 @@ async function heal(argv) {
   const args = parseArgs(argv, { surface: 'string', config: 'string' });
   const project = loadProject({ file: args.config });
   const dir = args._[0] ? path.resolve(args._[0]) : latestDoctorDir(project, args.surface);
-  if (!dir || !fs.existsSync(path.join(dir, 'doctor.json'))) throw new Error('no doctor check to repair from: run afrec doctor first');
+  if (!dir || !fs.existsSync(path.join(dir, 'doctor.json'))) throw new Error('no doctor check to repair from: run sfdemo doctor first');
   const bundle = writeHealBundle(project, dir, { denylist: loadDenylist(project.stateDir) });
-  out(`Repair bundle: ${bundle}\nGive ${path.join(bundle, 'README.md')} to your coding agent (the bundle holds no org data). It verifies its fix with:\n  afrec fixtures test ${path.join(bundle, 'fixture')} --pack ${path.join(bundle, 'pack.json')}`);
+  out(`Repair bundle: ${bundle}\nGive ${path.join(bundle, 'README.md')} to your coding agent (the bundle holds no org data). It verifies its fix with:\n  sfdemo fixtures test ${path.join(bundle, 'fixture')} --pack ${path.join(bundle, 'pack.json')}`);
   return 0;
 }
 
@@ -200,7 +200,7 @@ async function selectors(argv) {
     const { packs, overrides } = packStatus(project);
     if (args.json) { out(JSON.stringify({ packs, overrides }, null, 1)); return 0; }
     for (const p of packs) out(`${p.id.padEnd(16)} ${p.version.padEnd(10)} from API ${p.minApiVersion} (${releaseName(p.minApiVersion)})  ${p.origin}${p.verified.length ? `  verified: ${p.verified.map(v => v.release || v.apiVersion).join(', ')}` : ''}`);
-    for (const [surface, o] of Object.entries(overrides)) out(`healed ${surface}: ${Object.keys(o.elements).join(', ')} (${o.confirmedAt ? `confirmed ${o.confirmedAt.slice(0, 10)}: run afrec selectors promote` : 'not confirmed yet: run afrec doctor'})`);
+    for (const [surface, o] of Object.entries(overrides)) out(`healed ${surface}: ${Object.keys(o.elements).join(', ')} (${o.confirmedAt ? `confirmed ${o.confirmedAt.slice(0, 10)}: run sfdemo selectors promote` : 'not confirmed yet: run sfdemo doctor'})`);
     return 0;
   }
   if (sub === 'update') {
@@ -215,7 +215,7 @@ async function selectors(argv) {
     for (const s of surfaces) {
       const r = promote(project, s, { force: args.force });
       out(`${s}: ${r.pack.id} ${r.pack.version} written to ${r.written.join(', ')}`);
-      out(r.inToolRepo ? '  review the diff, run npm test, and open a pull request' : '  it applies now on this machine; to share it, open a pull request with that file on the agentforce-conversation-recorder repository');
+      out(r.inToolRepo ? '  review the diff, run npm test, and open a pull request' : '  it applies now on this machine; to share it, open a pull request with that file on the salesforce-demo-studio repository');
     }
     return 0;
   }
@@ -225,7 +225,7 @@ async function selectors(argv) {
     out(problems.length ? `${args._[0]}: ${problems.length} problem(s)\n${problems.map(p => '  ' + p).join('\n')}` : `${args._[0]}: valid (${pack.id} ${pack.version}, ${Object.keys(pack.elements).length} elements)`);
     return problems.length ? 2 : 0;
   }
-  throw new Error(`unknown: afrec selectors ${sub}`);
+  throw new Error(`unknown: sfdemo selectors ${sub}`);
 }
 
 async function fixtures(argv) {
@@ -233,7 +233,7 @@ async function fixtures(argv) {
   const args = parseArgs(rest, { pack: 'string', name: 'string', to: 'string', config: 'string' });
   const project = loadProject({ file: args.config });
   if (sub === 'add') {
-    if (!args._[0] || !args.name) throw new Error('usage: afrec fixtures add <doctor-dir> --name <name>');
+    if (!args._[0] || !args.name) throw new Error('usage: sfdemo fixtures add <doctor-dir> --name <name>');
     const doctorDir = path.resolve(args._[0]);
     const report = JSON.parse(fs.readFileSync(path.join(doctorDir, 'doctor.json'), 'utf8'));
     const inToolRepo = fs.existsSync(path.join(PACKAGE_ROOT, '.git'));
@@ -260,7 +260,7 @@ async function fixtures(argv) {
     out(`${dirs.length - failed} of ${dirs.length} fixtures pass`);
     return failed ? 1 : 0;
   }
-  throw new Error('usage: afrec fixtures test [dirs] [--pack file] | add <doctor-dir> --name <name>');
+  throw new Error('usage: sfdemo fixtures test [dirs] [--pack file] | add <doctor-dir> --name <name>');
 }
 
 async function baseline(argv) {
@@ -274,8 +274,8 @@ async function baseline(argv) {
     return 0;
   }
   if (sub === 'clear') { saveConfig(project, { baseline: null }); out('baseline cleared'); return 0; }
-  if (!sub || sub === 'show') { out(project.config.baseline ? path.join(project.recordingsDir, project.config.baseline) : 'no baseline (afrec baseline set <run>)'); return 0; }
-  throw new Error(`unknown: afrec baseline ${sub}`);
+  if (!sub || sub === 'show') { out(project.config.baseline ? path.join(project.recordingsDir, project.config.baseline) : 'no baseline (sfdemo baseline set <run>)'); return 0; }
+  throw new Error(`unknown: sfdemo baseline ${sub}`);
 }
 
 async function compare(argv) {
@@ -283,7 +283,7 @@ async function compare(argv) {
   const project = loadProject({ file: args.config });
   const dir = resolveRunDir(project, args._[0] || 'latest');
   const against = args.with ? resolveRunDir(project, args.with) : project.config.baseline ? path.join(project.recordingsDir, project.config.baseline) : null;
-  if (!against) throw new Error('no baseline: afrec baseline set <run>, or pass --with <run>');
+  if (!against) throw new Error('no baseline: sfdemo baseline set <run>, or pass --with <run>');
   const current = readRun(dir);
   const cmp = compareRuns(current.results, readRun(against));
   out(summarizeComparison(cmp));
@@ -307,7 +307,7 @@ async function setup(argv) {
     const r = await new Promise(resolve => spawn(process.execPath, [cli, 'install', 'chromium'], { stdio: 'inherit' }).on('exit', code => resolve(code === 0)));
     browserOk = r && fs.existsSync(chromium.executablePath());
   }
-  line(browserOk, 'Chromium', browserOk ? 'installed' : 'missing: afrec setup (or npx playwright install chromium)');
+  line(browserOk, 'Chromium', browserOk ? 'installed' : 'missing: sfdemo setup (or npx playwright install chromium)');
   try {
     const f = await runCmd(ffmpegBinary(), ['-version']);
     line(f.ok, 'ffmpeg', f.ok ? f.text.split('\n')[0].slice(0, 50) : 'does not run: npm rebuild ffmpeg-static, or set FFMPEG_PATH');
@@ -315,7 +315,7 @@ async function setup(argv) {
   const sf = await runCmd('sf', ['--version']);
   line(sf.ok, 'sf CLI', sf.ok ? sf.text.split('\n')[0] : 'missing: npm install --global @salesforce/cli, then sf org login web');
   if (sf.ok) {
-    try { const orgs = await listOrgs(); out(`  ${orgs.length} org(s) known to the sf CLI (afrec orgs checks their connection)`); } catch { /* listing is a bonus */ }
+    try { const orgs = await listOrgs(); out(`  ${orgs.length} org(s) known to the sf CLI (sfdemo orgs checks their connection)`); } catch { /* listing is a bonus */ }
   }
   return ok ? 0 : 1;
 }
@@ -326,7 +326,7 @@ async function init(argv) {
   const file = path.join(dir, CONFIG_FILE);
   if (fs.existsSync(file) && !args.force) throw new Error(`${CONFIG_FILE} already exists (use --force to overwrite)`);
   const config = {
-    $schema: './node_modules/agentforce-conversation-recorder/schema/config.schema.json',
+    $schema: './node_modules/salesforce-demo-studio/schema/config.schema.json',
     scenarios: 'scenarios', recordings: '.local/recordings', defaults: args.org ? { org: args.org } : {}, parallel: 3, baseline: null,
   };
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n');
@@ -345,12 +345,12 @@ async function init(argv) {
   }
   const gitignore = path.join(dir, '.gitignore');
   const current = fs.existsSync(gitignore) ? fs.readFileSync(gitignore, 'utf8') : '';
-  const missing = ['.local/', '.afrec/'].filter(l => !current.split(/\r?\n/).includes(l));
+  const missing = ['.local/', '.sfdemo/'].filter(l => !current.split(/\r?\n/).includes(l));
   if (missing.length) {
-    fs.appendFileSync(gitignore, `${current && !current.endsWith('\n') ? '\n' : ''}# afrec: recordings and local state show org data\n${missing.join('\n')}\n`);
+    fs.appendFileSync(gitignore, `${current && !current.endsWith('\n') ? '\n' : ''}# sfdemo: recordings and local state show org data\n${missing.join('\n')}\n`);
     out(`added ${missing.join(', ')} to .gitignore`);
   }
-  out('next: afrec setup, then afrec run --dry-run, then afrec ui');
+  out('next: sfdemo setup, then sfdemo run --dry-run, then sfdemo ui');
   return 0;
 }
 
@@ -367,8 +367,8 @@ export async function main(argv) {
   if (command === '--version' || command === '-v') { out(VERSION); return 0; }
   if (rest.includes('--help') || rest.includes('-h')) { out(HELP); return 0; }
   if (COMMANDS[command]) return COMMANDS[command](rest);
-  if (/\.(md|csv)$/i.test(command) || fs.existsSync(command)) return run(argv); // afrec scenarios/ == afrec run scenarios/
-  err(`unknown command "${command}" (afrec --help)`);
+  if (/\.(md|csv)$/i.test(command) || fs.existsSync(command)) return run(argv); // sfdemo scenarios/ == sfdemo run scenarios/
+  err(`unknown command "${command}" (sfdemo --help)`);
   return 2;
 }
 

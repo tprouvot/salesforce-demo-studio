@@ -96,7 +96,7 @@ export async function awaitReply(surface, before, { timeout, settle, optional = 
         healed = await surface.heal(sentText);
         if (healed) { before = { ...before, messages: [], events: before.events }; continue; }
       }
-      if (!optional && !echoed && Date.now() - started > 20000) throw new Error('the message never appeared in the chat (not sent, or the chat markup changed: run afrec doctor)');
+      if (!optional && !echoed && Date.now() - started > 20000) throw new Error('the message never appeared in the chat (not sent, or the chat markup changed: run sfdemo doctor)');
       if (optional && !chat.busy && Date.now() - started > 15000) return null;
       const handoff = chat.events.slice(eventsBefore).find(e => /\bleft\b|transferr|ended/i.test(e)) || (/transferr/i.test(chat.busyText) ? chat.busyText : '');
       if (handoff && !handoffSince) handoffSince = Date.now();

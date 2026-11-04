@@ -1,4 +1,4 @@
-/* Shared by the UI (afrec ui) and every run's report.html. */
+/* Shared by the UI (sfdemo ui) and every run's report.html. */
 :root {
   --bg: #f6f7f9; --panel: #ffffff; --text: #181b21; --muted: #5b6270; --line: #dfe3ea; --accent: #0b5cab; --accent-soft: #e6f0fb;
   --ok: #1e7b45; --ok-soft: #e3f4ea; --warn: #8a5300; --warn-soft: #fdf0d9; --bad: #b3261e; --bad-soft: #fbe5e3;

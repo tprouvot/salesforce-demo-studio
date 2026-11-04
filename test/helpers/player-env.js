@@ -15,15 +15,15 @@ import { installFakeSf, orgRules, fakeSfSupported } from './fake-sf.js';
 import { startFakeOrg, startFakeSite } from './fake-org.js';
 
 const hasBrowser = fs.existsSync(chromium.executablePath());
-if (!hasBrowser && process.env.AFREC_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
+if (!hasBrowser && process.env.SFDEMO_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
 
-/** The checks of afrec.config.json, without the blank-screenshot one (the fake chat is plain on purpose). */
+/** The checks of sfdemo.config.json, without the blank-screenshot one (the fake chat is plain on purpose). */
 export const CHECKS = { gifMaxBytes: 15000000, videoSlackSeconds: 3, minBytesPerMegapixel: 0 };
 
 export function usePlayerEnv() {
   const env = {
     skip: !hasBrowser ? 'Chromium is not installed' : !fakeSfSupported ? 'the fake sf CLI needs a POSIX shell' : false,
-    tmp: fs.mkdtempSync(path.join(os.tmpdir(), 'afrec-play-')),
+    tmp: fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-play-')),
     browser: null, org: null, site: null, sf: null,
     /**
      * Records `text` (a markdown scenario) and returns { result, conv, dir, events, read(file) }.
@@ -38,7 +38,7 @@ export function usePlayerEnv() {
       const out = fs.mkdtempSync(path.join(env.tmp, 'run-'));
       const events = [];
       const result = await runConversation(env.browser, conv, {
-        out, stateDir: ctx.stateDir || path.join(out, '.afrec'), config: { checks: CHECKS }, emit: e => events.push(e), broker: ctx.broker,
+        out, stateDir: ctx.stateDir || path.join(out, '.sfdemo'), config: { checks: CHECKS }, emit: e => events.push(e), broker: ctx.broker,
       });
       const dir = path.join(out, conv.folder);
       return { result, conv, dir, events, read: f => fs.readFileSync(path.join(dir, f), 'utf8') };

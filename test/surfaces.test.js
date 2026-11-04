@@ -1,7 +1,7 @@
 /**
  * The chat surfaces against the live chats of helpers/fake-org.js: opening, reading, clicking, ending a chat a
  * previous visit left open, healing a broken input locator. Needs Chromium (skipped without it, unless
- * AFREC_REQUIRE_BROWSER=1).
+ * SFDEMO_REQUIRE_BROWSER=1).
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,7 +15,7 @@ import { Tracker, findVisible, findExisting, labelCandidates, toLocator } from '
 import { startFakeOrg, startFakeSite } from './helpers/fake-org.js';
 
 const hasBrowser = fs.existsSync(chromium.executablePath());
-if (!hasBrowser && process.env.AFREC_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
+if (!hasBrowser && process.env.SFDEMO_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
 const skip = !hasBrowser && 'Chromium is not installed';
 
 let browser;
