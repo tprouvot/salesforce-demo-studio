@@ -454,7 +454,7 @@
     const script = h('details', { class: 'card pad', ...(d.errors.length ? { open: true } : {}) }, h('summary', {}, h('strong', {}, 'Script')),
       h('p', { class: 'muted' }, 'Paragraphs are spoken, # headings are chapters, list items happen on screen. The format: docs/DEMOS.md.'),
       area, h('div', { class: 'row gap' }, h('button', { class: 'btn primary', onclick: guard(async () => { await api('PUT', '/api/demo', { file, text: area.value }); toast('Saved'); reload(); }) }, 'Save the script')));
-    panel.replaceChildren(header, video, voiceCard, chapters, notes, script, liveBlock());
+    panel.replaceChildren(...[header, video, voiceCard, chapters, notes, script, liveBlock()].filter(Boolean)); // a demo without slides has no notes card
   }
 
   /** The voice of a demo: a language, its voices, the pace; hear any sentence, then keep the voice. */

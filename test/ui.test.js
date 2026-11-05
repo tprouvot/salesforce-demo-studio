@@ -74,3 +74,25 @@ test('the Demos page: the list, a demo with its voice, chapters, speaker notes a
     assert.deepEqual(errors, []);
   } finally { await browser.close(); await server.close(); }
 });
+
+test('the Demos page of a demo without slides: no speaker-notes card, and nothing stray on the page', { skip: !hasBrowser && 'Chromium is not installed' }, async () => {
+  const { startServer } = await import('../src/ui/server.js');
+  const { loadProject } = await import('../src/config.js');
+  const os = await import('node:os');
+  const path = await import('node:path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-ui-live-'));
+  fs.mkdirSync(path.join(dir, 'demos'));
+  fs.writeFileSync(path.join(dir, 'demos', 'hello.md'), '---\ntitle: Hello\nwindows:\n  Shell: { terminal: .. }\n---\n# Hello\n- window: Shell\n\nA terminal.\n\n- run: ls\n');
+  const server = await startServer({ project: loadProject({ dir }), port: 0 });
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage();
+    await page.goto(server.url);
+    await page.click('.files button.file');
+    await page.waitForSelector('.chapter');
+    assert.match(await page.locator('.chapter').textContent(), /live in Shell/);
+    assert.equal(await page.locator('summary', { hasText: 'Speaker notes' }).count(), 0);
+    const stray = await page.evaluate(() => [...document.querySelectorAll('main, #panel, .panel, body')].flatMap(el => [...el.childNodes]).filter(n => n.nodeType === 3 && n.textContent.trim()).map(n => n.textContent.trim()));
+    assert.deepEqual(stray, [], 'no text node outside the cards (a "null" was printed there)');
+  } finally { await browser.close(); await server.close(); }
+});
