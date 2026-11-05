@@ -17,7 +17,16 @@ export function installOverlay({ label }) {
     c.id = '__sfdemoCursor';
     c.style.cssText = 'position:fixed;left:-60px;top:-60px;width:26px;height:26px;z-index:2147483647;pointer-events:none;'
       + 'transition:left .35s ease-out,top .35s ease-out,transform .1s';
-    c.innerHTML = '<svg viewBox="0 0 24 24" width="26" height="26"><path d="M4 2l6.5 19 2.7-7.6L21 11.2z" fill="#16325c" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+    // built node by node: editors (VS Code, Cursor) enforce Trusted Types, where innerHTML throws
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '26');
+    svg.setAttribute('height', '26');
+    const arrow = document.createElementNS(ns, 'path');
+    for (const [k, v] of Object.entries({ d: 'M4 2l6.5 19 2.7-7.6L21 11.2z', fill: '#16325c', stroke: '#fff', 'stroke-width': '1.6', 'stroke-linejoin': 'round' })) arrow.setAttribute(k, v);
+    svg.appendChild(arrow);
+    c.appendChild(svg);
     document.documentElement.appendChild(c);
     const move = e => { c.style.left = e.clientX + 'px'; c.style.top = e.clientY + 'px'; };
     document.addEventListener('mousemove', move, true);

@@ -1,7 +1,7 @@
 {
   "name": "salesforce-demo-studio",
   "version": "0.1.0",
-  "description": "Records whole Salesforce demos: your slides, a voice-over read by a local Piper voice, and live actions in Lightning, Setup, Experience Cloud and Agentforce chats, assembled into one video. Also records Agentforce conversations on their own. No AI needed at record time.",
+  "description": "Records whole Salesforce demos: your slides, a voice-over read by a local Piper voice, and live actions in Lightning, Setup, Experience Cloud, Agentforce chats, a terminal, VS Code or Cursor, assembled into one video. Also records Agentforce conversations on their own. No AI needed at record time.",
   "type": "module",
   "license": "Apache-2.0",
   "bin": {
@@ -37,7 +37,9 @@
     "playwright",
     "recording",
     "demo",
-    "embedded-messaging"
+    "embedded-messaging",
+    "vscode",
+    "terminal"
   ],
   "dependencies": {
     "ffmpeg-static": "5.3.0",

@@ -13,6 +13,8 @@ import { recordDemo, isLive } from '../demo/recorder.js';
 import { assembleDemo, missingSlides } from '../demo/assemble.js';
 import { InputBroker, promptOnTerminal } from '../engine/input.js';
 import { minutes } from '../engine/report.js';
+import { EDITORS, findEditor, openProfileForUser } from '../demo/editor.js';
+import { ptyRunner } from '../demo/terminal.js';
 
 const out = s => process.stdout.write(s + '\n');
 const err = s => process.stderr.write(s + '\n');
@@ -190,4 +192,32 @@ export async function setupVoice({ install, line, voice = DEFAULT_VOICE }) {
     : `${voice} not installed yet: sfdemo setup --voice${voices.length ? ` (installed: ${voices.map(v => v.key).join(', ')})` : ''}`);
 }
 
-export const DEMO_COMMANDS = { demo: demoCommand, narrate: narrateCommand, voices: voicesCommand, notes: notesCommand };
+/**
+ * sfdemo editor <vscode|cursor> [folder]: opens the editor with the profile demos are filmed in, for the user to
+ * set it up by hand, once: log in (Cursor needs it), install an extension, look at it. Nothing is filmed.
+ */
+async function editorCommand(argv) {
+  const args = parseArgs(argv, {});
+  const kind = String(args._[0] || '').toLowerCase().replace(/^code$/, 'vscode');
+  if (!EDITORS[kind]) throw new Error('usage: sfdemo editor <vscode|cursor> [folder]');
+  const profile = openProfileForUser(kind, args._[1]);
+  out(`${EDITORS[kind].name} opens with its demo profile (${profile.root}).`);
+  out(kind === 'cursor'
+    ? 'Log in there once, yourself: demos filmed in Cursor need it, and sfdemo never logs in for you. Close the window when done.'
+    : 'Install the extensions you want, or look around; close the window when done. A demo lists its extensions in its window (extensions: [...]).');
+  out('Settings changed there do not stay: each recording writes the profile\'s settings, plus those of the demo\'s window (settings: {...}).');
+  return 0;
+}
+
+/** The editors and terminal part of `sfdemo setup`: information only (a demo without them needs none). */
+export function setupEditors({ line }) {
+  line(!!ptyRunner() || process.platform === 'win32', 'terminal windows', ptyRunner() ? `commands run in a real terminal (${ptyRunner()})` : process.platform === 'win32' ? 'commands run with pipes (no pseudo-terminal on Windows)' : 'Python 3 missing: commands run with pipes, without colours or spinners');
+  for (const kind of Object.keys(EDITORS)) {
+    const found = findEditor(kind);
+    const name = EDITORS[kind].name;
+    const hint = kind === 'cursor' ? ' (it needs a login once, by you: sfdemo editor cursor)' : '';
+    line(!!found, `${name} windows`, found ? `${found.app}${hint}` : `not installed (only for demos with a ${kind}: window; or set ${EDITORS[kind].env})`);
+  }
+}
+
+export const DEMO_COMMANDS = { demo: demoCommand, narrate: narrateCommand, voices: voicesCommand, notes: notesCommand, editor: editorCommand };

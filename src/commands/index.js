@@ -21,7 +21,7 @@ import { writeRunReport } from '../engine/report.js';
 import { listOrgs } from '../engine/salesforce.js';
 import { ffmpegBinary } from '../engine/media.js';
 import { loadDenylist } from '../denylist.js';
-import { DEMO_COMMANDS, setupVoice, chooseVoice, ensureVoice } from './demo.js';
+import { DEMO_COMMANDS, setupVoice, setupEditors, chooseVoice, ensureVoice } from './demo.js';
 import { DEFAULT_VOICE } from '../demo/script.js';
 import { isDemoText } from '../demo/script.js';
 
@@ -38,6 +38,7 @@ Usage: sfdemo <command> [options]
   narrate <demo.md>       the voice-over alone: every line read, the length of each chapter
   voices [--language fr]  Piper's voices; --download <voice>, --try <voice> [--text "..."] [--play], --installed
   notes <demo.md>         what to put in each slide's speaker notes (--json)
+  editor <vscode|cursor>  open an editor with the profile demos film it in: log in (Cursor), add extensions
 
   run [files|folders]     record conversations (default: the project's scenarios folder)
         --dry-run  --parallel <n>  --out <dir>  --only <name,...>  --headed
@@ -329,6 +330,7 @@ async function setup(argv) {
   }
   const voice = (() => { try { return loadProject({}).config.voice; } catch { return DEFAULT_VOICE; } })();
   await setupVoice({ install: args.voice && !args.check, voice, line: (good, name, detail) => (args.voice || good ? line(good, name, detail) : out(`· ${name}: ${detail} (only for narrated demos)`)) });
+  setupEditors({ line: (good, name, detail) => out(`${good ? '✓' : '·'} ${name}: ${detail}`) });
   return ok ? 0 : 1;
 }
 

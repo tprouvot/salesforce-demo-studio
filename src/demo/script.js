@@ -23,17 +23,32 @@
  *   1. What can you help me with?   a message typed into the window's chat (Agentforce or Messaging)
  *      - expect: help               a check on its answer
  *
- * A live step is a list item (`-`, `1.`) or a line starting with a step word and a colon. A fenced ```apex block
- * runs in the Developer Console. HTML comments are ignored, so are presenter notes written as `> note: ...`.
+ * A live step is a list item (`-`, `1.`) or a line starting with a step word and a colon. A fenced code block
+ * belongs to the window above it: ```apex runs in the Developer Console of a Salesforce window, ```sh runs line by
+ * line in a terminal window, and any code is typed into the open file of a VS Code or Cursor window. HTML comments
+ * are ignored, so are presenter notes written as `> note: ...`.
+ *
+ * Windows can also be a terminal ({ terminal: ~/my-project }), VS Code or Cursor ({ vscode: ., files: [README.md] }),
+ * with their own steps: run:, start:, type:, command:, and open: for a file. `prepare:` runs a command off camera
+ * before a chapter is filmed (each take), to give it the same starting point every time.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import YAML from 'yaml';
 import { parseStep, CHECKS } from '../scenario/parse.js';
 import { resolveConversation } from '../scenario/resolve.js';
 
 /** Steps only demos have, on top of the conversation steps (message, click, wait, type-from and the checks). */
-export const DEMO_STEPS = ['slide', 'window', 'open', 'setup', 'record', 'fill', 'select', 'press', 'scroll', 'wait for', 'point', 'ai', 'apex'];
+export const DEMO_STEPS = ['slide', 'window', 'open', 'setup', 'record', 'fill', 'select', 'press', 'scroll', 'wait for', 'point', 'ai', 'apex', 'run', 'start', 'type', 'command', 'prepare'];
+/** The steps each kind of window plays (the others are an error in it); checks, say, wait and prepare go anywhere. */
+const WINDOW_STEPS = {
+  browser: ['open', 'setup', 'record', 'click', 'fill', 'select', 'press', 'scroll', 'wait-for', 'point', 'ai', 'apex', 'message', 'type'],
+  terminal: ['run', 'start', 'type', 'press', 'scroll', 'wait-for', 'point', 'click', 'code'],
+  editor: ['open', 'command', 'type', 'code', 'run', 'start', 'click', 'fill', 'select', 'press', 'scroll', 'wait-for', 'point', 'ai'],
+};
+const SHELL_LANGS = ['', 'sh', 'bash', 'zsh', 'shell', 'console', 'terminal', 'powershell', 'ps1', 'cmd', 'bat'];
+const EDITOR_NAMES = { vscode: 'VS Code', cursor: 'Cursor' };
 const CONVERSATION_WORDS = ['click', 'wait', 'type-from', 'expect-not', 'expect-button', 'max-seconds', 'expect'];
 const SETTINGS = ['type', 'title', 'org', 'deck', 'slides', 'voice', 'language', 'pace', 'pause', 'windows', 'say', 'takes', 'reply timeout', 'size', 'filler', 'retry'];
 const PACES = { slow: 0.75, presenter: 0.8, normal: 1, brisk: 1.15 };
@@ -89,6 +104,10 @@ function demoStep(word, value, where) {
     case 'point': need('the label to point at'); return { type, label: value.replace(/^["“'](.*)["”']$/, '$1'), where };
     case 'ai': need('what to do, in plain words'); return { type, instruction: value, where };
     case 'apex': need('Apex code (or a ```apex block below the line)'); return { type, code: value, where };
+    case 'run': case 'start': need('a command line (npm test, sf org list...)'); return { type, command: value, where };
+    case 'prepare': need('a command run off camera before the chapter (cp -R template/ work/)'); return { type, command: value, where };
+    case 'type': need('the text to type'); return { type, text: value.replace(/^["“'](.*)["”']$/, '$1'), where };
+    case 'command': need('a command of the Command Palette, as it shows there (View: Toggle Terminal)'); return { type, name: value.replace(/^["“'](.*)["”']$/, '$1'), where };
     default: return null;
   }
 }
@@ -124,18 +143,68 @@ function readSettings(raw, file, defaults = {}) {
   return out;
 }
 
+/** The folder of a terminal or editor window: relative to the demo's file (`.` is its folder), ~ for home. */
+function folderOf(value, file, name, kind) {
+  if (value === true || value === '.' || value === '') return path.dirname(path.resolve(file));
+  if (typeof value !== 'string') throw new Error(`${file}: window "${name}": ${kind}: is the folder to open (. for the demo's folder, ~/my-project, /tmp/work)`);
+  const v = value.trim().replace(/^~(?=$|[\\/])/, os.homedir());
+  return path.resolve(path.dirname(path.resolve(file)), v);
+}
+
+/** What kind of window a resolved window is: browser (Salesforce, a site, a web page), terminal or editor. */
+export const kindOf = w => (w.surface === 'terminal' ? 'terminal' : w.surface === 'editor' ? 'editor' : 'browser');
+
 /**
  * A window as a resolved conversation (it reuses the conversations' sign-in rules): Lightning with org (as the CLI
  * user, or Login-As with user), a site with site (a guest, Login-As, or a password with credentials), or any web
  * page with url (no sign-in). A window takes the demo's org unless it names its own.
  */
 export function resolveWindow(name, raw, settings, file) {
-  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`${file}: window "${name}" needs its settings, e.g. { org: myOrg } or { site: https://... }`);
-  const { label, url, ...rest } = raw;
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`${file}: window "${name}" needs its settings, e.g. { org: myOrg }, { site: https://... } or { terminal: . }`);
+  const { label, url, from, ...rest } = raw;
+  const only = (kind, allowed) => {
+    const extra = Object.keys(rest).filter(k => !allowed.includes(k));
+    if (extra.length) throw new Error(`${file}: window "${name}" is ${kind}: it takes no ${extra.join(', ')} (it takes ${['label', ...allowed.filter(k => !['terminal', 'vscode', 'cursor'].includes(k))].join(', ')})`);
+  };
   if (url) {
-    if (Object.keys(rest).length) throw new Error(`${file}: window "${name}" has url:, a plain web page: it takes no ${Object.keys(rest).join(', ')}`);
+    only('a plain web page (url:)', []);
     try { new URL(String(url)); } catch { throw new Error(`${file}: window "${name}": url: ${url} is not a URL`); }
-    return { name, label: label ? String(label) : name, surface: 'web', signIn: 'none', url: String(url), identity: `web|${name}` };
+    return { name, label: label ? String(label) : name, surface: 'web', signIn: 'none', url: String(url), ...(from ? { from: String(from) } : {}), identity: `web|${name}` };
+  }
+  if (from) throw new Error(`${file}: window "${name}": from: goes with url: (the link a terminal window printed that starts with url)`);
+  if (rest.terminal !== undefined) {
+    only('a terminal', ['terminal', 'title', 'prompt', 'theme']);
+    if (rest.theme !== undefined && !['dark', 'light'].includes(String(rest.theme))) throw new Error(`${file}: window "${name}": theme: is dark or light`);
+    return {
+      name, label: label ? String(label) : name, surface: 'terminal', signIn: 'none', identity: `terminal|${name}`,
+      folder: folderOf(rest.terminal, file, name, 'terminal'),
+      ...(rest.title !== undefined ? { title: String(rest.title) } : {}),
+      ...(rest.prompt !== undefined ? { prompt: String(rest.prompt) } : {}),
+      ...(rest.theme !== undefined ? { theme: String(rest.theme) } : {}),
+    };
+  }
+  const editor = ['vscode', 'cursor'].find(k => rest[k] !== undefined);
+  if (editor) {
+    only(EDITOR_NAMES[editor], [editor, 'files', 'extensions', 'settings', 'theme', 'zoom']);
+    const list = (k, v) => {
+      if (v === undefined) return undefined;
+      const items = Array.isArray(v) ? v : [v];
+      if (!items.every(x => typeof x === 'string' && x.trim())) throw new Error(`${file}: window "${name}": ${k}: is a list of ${k === 'files' ? 'file paths' : 'extension ids (publisher.name)'}`);
+      return items.map(x => x.trim());
+    };
+    const extensions = list('extensions', rest.extensions);
+    if (extensions) for (const id of extensions) if (!/^[\w-]+\.[\w.-]+$/.test(id)) throw new Error(`${file}: window "${name}": "${id}" is not an extension id (publisher.name, as in the Marketplace: salesforce.salesforcedx-vscode)`);
+    if (rest.settings !== undefined && (typeof rest.settings !== 'object' || rest.settings === null || Array.isArray(rest.settings))) throw new Error(`${file}: window "${name}": settings: are ${EDITOR_NAMES[editor]} settings, e.g. { "editor.fontSize": 16 }`);
+    if (rest.zoom !== undefined && !Number.isFinite(Number(rest.zoom))) throw new Error(`${file}: window "${name}": zoom: is ${EDITOR_NAMES[editor]}'s zoom level (0 is 100 %, 1 is 120 %)`);
+    return {
+      name, label: label ? String(label) : name, surface: 'editor', editor, signIn: 'none', identity: `${editor}|${name}`,
+      folder: folderOf(rest[editor], file, name, editor),
+      files: list('files', rest.files) || [],
+      ...(extensions ? { extensions } : {}),
+      ...(rest.settings ? { settings: rest.settings } : {}),
+      ...(rest.theme !== undefined ? { theme: String(rest.theme) } : {}),
+      ...(rest.zoom !== undefined ? { zoom: Number(rest.zoom) } : {}),
+    };
   }
   const merged = { ...(settings.org ? { org: settings.org } : {}), ...rest };
   if (!merged.site && !merged.surface) merged.surface = 'lightning';
@@ -179,14 +248,17 @@ export function parseDemo(text, file, options = {}) {
   lines.forEach((line, i) => {
     const where = `${file}:${i + 1 + offset}`;
     if (fence) {
-      if (/^\s*```\s*$/.test(line)) { add({ type: 'apex', code: fence.lines.join('\n'), where: fence.where }); fence = null; } else fence.lines.push(line);
+      if (/^\s*```\s*$/.test(line)) {
+        const indent = fence.indent;
+        add({ type: 'code', lang: fence.lang, code: fence.lines.map(l => (l.startsWith(indent) ? l.slice(indent.length) : l.trimStart())).join('\n'), where: fence.where });
+        fence = null;
+      } else fence.lines.push(line);
       return;
     }
-    const open = line.match(/^\s*```\s*(\w*)\s*$/);
+    const open = line.match(/^(\s*)```\s*([\w+#.-]*)\s*$/);
     if (open) {
       flush();
-      if (!/^apex$/i.test(open[1])) throw new Error(`${where}: a code block in a demo is Apex to run in the Developer Console: start it with \`\`\`apex`);
-      fence = { lines: [], where };
+      fence = { lines: [], where, lang: open[2].toLowerCase(), indent: open[1] };
       return;
     }
     const heading = line.match(/^ {0,3}#{1,6}\s+(.*?)\s*#*\s*$/);
@@ -207,26 +279,56 @@ export function parseDemo(text, file, options = {}) {
     paragraph = paragraph || { lines: [], where };
     paragraph.lines.push(line.trim());
   });
-  if (fence) throw new Error(`${fence.where}: the \`\`\`apex block is not closed`);
+  if (fence) throw new Error(`${fence.where}: the \`\`\`${fence.lang} block is not closed`);
   flush();
 
   const windows = {};
   for (const [name, raw] of Object.entries(settings.windows)) windows[name] = resolveWindow(name, raw, settings, file);
-  let current = null;
+  for (const w of Object.values(windows)) {
+    if (!w.from) continue;
+    if (!windows[w.from]) throw new Error(`${file}: window "${w.name}": from: ${w.from} is not a window of windows: (${Object.keys(windows).join(', ')})`);
+    if (kindOf(windows[w.from]) !== 'terminal') throw new Error(`${file}: window "${w.name}": from: ${w.from} must be a terminal window: the link is the one it printed`);
+  }
   let spoken = 0;
   const messages = new Set();
   for (const ch of chapters) {
+    let current = null; // each chapter is filmed on its own: it names its window before its first live step
+    const used = new Set();
     for (const step of ch.steps) {
       if (step.type === 'say') spoken++;
       if (step.type === 'window') {
         if (!windows[step.name]) throw new Error(`${step.where}: no window "${step.name}" in windows: (${Object.keys(windows).join(', ') || 'none yet'})`);
         current = step.name;
+        used.add(current);
       } else if (step.type === 'slide') {
         current = null;
-      } else if (!['say', 'wait'].includes(step.type) && !CHECKS.includes(step.type)) {
-        if (!current) throw new Error(`${step.where}: "${step.type}" needs a window first: add "- window: <name>" above it`);
+      } else if (!['say', 'wait', 'prepare'].includes(step.type) && !CHECKS.includes(step.type)) {
+        if (!current) throw new Error(`${step.where}: "${step.type === 'code' ? `\`\`\`${step.lang}` : step.type}" needs a window first: add "- window: <name>" above it, in this chapter`);
+        const w = windows[current];
+        const kind = kindOf(w);
+        step.kind = kind;
+        if (step.type === 'code') {
+          if (kind === 'editor') { /* typed into the open file */ } else if (kind === 'terminal') {
+            if (!SHELL_LANGS.includes(step.lang)) throw new Error(`${step.where}: a \`\`\`${step.lang} block in the terminal ${current}: its lines run as commands, write \`\`\`sh`);
+          } else if (step.lang === 'apex') {
+            Object.assign(step, { type: 'apex' });
+            delete step.lang;
+          } else throw new Error(`${step.where}: a \`\`\`${step.lang || '(no language)'} block in ${current}: a browser window runs only \`\`\`apex (in the Developer Console); code to type goes in a VS Code or Cursor window, commands in a terminal window`);
+        }
+        if (!WINDOW_STEPS[kind].includes(step.type)) {
+          const fits = Object.entries(WINDOW_STEPS).filter(([, steps]) => steps.includes(step.type)).map(([k]) => (k === 'browser' ? 'a browser window (Salesforce, a site, a page)' : k === 'editor' ? 'a VS Code or Cursor window' : 'a terminal window'));
+          throw new Error(`${step.where}: "${step.type === 'message' ? 'a chat message' : `${step.type}:`}" does not go in ${current}, ${kind === 'browser' ? 'a browser window' : kind === 'editor' ? `a ${EDITOR_NAMES[w.editor]} window` : 'a terminal window'}${fits.length ? `: it needs ${fits.join(' or ')}` : ''}`);
+        }
         if (step.type === 'message') messages.add(current);
       }
+    }
+    for (const editor of ['vscode', 'cursor']) {
+      const same = [...used].filter(n => windows[n].editor === editor);
+      if (same.length > 1) throw new Error(`${ch.where || file}: chapter "${ch.title}" shows ${same.join(' and ')}: one ${EDITOR_NAMES[editor]} window per chapter (they share its demo profile); open the other's files in it, or show it in another chapter`);
+    }
+    for (const name of used) {
+      const w = windows[name];
+      if (w.from && !used.has(w.from)) throw new Error(`${ch.where || file}: chapter "${ch.title}" shows ${name}, which opens the link ${w.from} prints: show ${w.from} in that chapter too`);
     }
   }
   for (const name of messages) windows[name].chat = true;
@@ -248,7 +350,12 @@ export function cue(step) {
   switch (step.type) {
     case 'window': return `▶ Switch to ${step.name}`;
     case 'setup': return `▶ Setup › ${step.page}`;
-    case 'open': return `▶ Open ${step.target}`;
+    case 'open': return step.kind === 'editor' ? `▶ Open the file ${step.target} (Quick Open)` : `▶ Open ${step.target}`;
+    case 'run': return `▶ Run ${step.kind === 'editor' ? "in the editor's terminal" : 'in the terminal'}: ${step.command}`;
+    case 'start': return `▶ Start ${step.kind === 'editor' ? "in the editor's terminal" : 'in the terminal'} (it keeps running): ${step.command}`;
+    case 'type': return `▶ Type ${q(step.text)}`;
+    case 'command': return `▶ Command Palette › ${step.name}`;
+    case 'code': return step.kind === 'terminal' ? `▶ Run in the terminal:\n${step.code}` : `▶ Type in the file:\n${step.code}`;
     case 'record': return `▶ Open the ${step.object} ${q(step.name)}`;
     case 'click': return `▶ Click ${q(step.label)}`;
     case 'fill': return `▶ Type ${q(step.value)} in ${step.field}`;

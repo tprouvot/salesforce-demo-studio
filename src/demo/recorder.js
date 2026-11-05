@@ -19,6 +19,8 @@ import { CHECKS } from '../scenario/parse.js';
 import { installOverlay } from './overlay.js';
 import * as actions from './actions.js';
 import { resolveAi } from './ai.js';
+import { openTerminal, demoEnv, runOffCamera } from './terminal.js';
+import { openEditor } from './editor.js';
 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const FILLER_AFTER = 20000;
@@ -38,10 +40,19 @@ export function frameOf(demo) {
 
 export const takeDir = (out, chapterNo, take) => path.join(out, 'takes', `ch${pad(chapterNo)}`, `take${take}`);
 
+const isLocal = url => { try { return ['localhost', '127.0.0.1', '[::1]', '::1'].includes(new URL(url).hostname); } catch { return false; } };
+
 /** Signs a window in and opens it, off camera; the page is filmed from its creation (its offset in the video). */
 async function openWindow(browser, demo, name, dir, { log, stateDir }) {
   const conv = demo.windows[name];
   const { viewport, scale } = frameOf(demo);
+  const env = demoEnv(stateDir);
+  if (conv.surface === 'terminal') {
+    const w = await openTerminal(browser, conv, { viewport, scale, videoDir: path.join(dir, 'video'), env, log: m => log(`${name}: ${m}`) });
+    log(`${name}: ready (a terminal in ${w.who})`);
+    return w;
+  }
+  if (conv.surface === 'editor') return openEditor(conv, { viewport, dir, env, log });
   let storageState;
   let base = null;
   let who = 'not signed in';
@@ -59,7 +70,14 @@ async function openWindow(browser, demo, name, dir, { log, stateDir }) {
   if (conv.org) w.classicBase = await orgInfo(conv.org).then(o => o.instanceUrl, () => null);
   if (conv.surface === 'web') {
     w.base = new URL(conv.url).origin;
-    await page.goto(conv.url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+    if (conv.from) w.pending = { from: conv.from }; // the link a terminal prints, once it printed it
+    else {
+      try { await page.goto(conv.url, { waitUntil: 'domcontentloaded', timeout: 120000 }); } catch (e) {
+        if (!isLocal(conv.url)) throw e;
+        w.pending = {}; // a local app the demo starts itself: opened when it is shown
+        log(`${name}: ${conv.url} does not answer yet: it opens when the window is shown`);
+      }
+    }
   } else if (conv.chat) {
     const pack = JSON.parse(JSON.stringify(effectivePack(conv.surface, w.classicBase ? (await orgInfo(conv.org)).apiVersion : null, stateDir)));
     w.surface = createSurface(page, conv, pack, { log: m => log(`${name}: ${m}`) });
@@ -79,6 +97,29 @@ async function openWindow(browser, demo, name, dir, { log, stateDir }) {
   await actions.settle(page, 2500);
   log(`${name}: ready (${who})`);
   return w;
+}
+
+/**
+ * The page of a web window that could not open off camera: its link, as printed by a terminal window (from:), or a
+ * local app that answers now. Waits for it up to a minute, while the previous view stays on screen.
+ */
+async function openPending(w, windows) {
+  const { conv, page } = w;
+  const deadline = Date.now() + 60000;
+  let url = w.pending.from ? null : conv.url;
+  let lastError = null;
+  while (Date.now() < deadline) {
+    if (w.pending.from) {
+      const t = windows[w.pending.from];
+      if (!t) throw new Error(`${w.name} opens the link ${w.pending.from} prints, and ${w.pending.from} is not in this chapter`);
+      url = t.links().find(l => l.startsWith(conv.url)) || null;
+    }
+    if (url) {
+      try { await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 }); w.pending = null; await actions.settle(page, 1500); return; } catch (e) { lastError = e; }
+    }
+    await sleep(500);
+  }
+  throw new Error(w.pending.from ? `${w.pending.from} printed no link starting with ${conv.url} in a minute` : `${conv.url} did not answer in a minute${lastError ? ` (${lastError.message.split('\n')[0]})` : ''}`);
 }
 
 /**
@@ -105,6 +146,11 @@ export async function recordChapter(browser, demo, chapterNo, take, ctx) {
   const pause = demo.settings.pause * 1000;
   const replyTimeout = (Number(demo.settings.replyTimeout) || 90) * 1000;
   try {
+    for (const step of chapter.steps.filter(s => s.type === 'prepare')) {
+      log(`prepare: ${step.command}`);
+      const r = await runOffCamera(step.command, { cwd: path.dirname(demo.file), env: demoEnv(ctx.stateDir) });
+      if (r.code !== 0) throw new Error(`${step.where}: prepare: "${step.command}" ended with exit code ${r.code}${r.tail ? `: ${r.tail}` : ''}`);
+    }
     const names = [...new Set(chapter.steps.filter(s => s.type === 'window').map(s => s.name))];
     for (const name of names) windows[name] = await openWindow(browser, demo, name, dir, { log, stateDir: ctx.stateDir });
     t0 = Date.now();
@@ -154,7 +200,13 @@ export async function recordChapter(browser, demo, chapterNo, take, ctx) {
       }
       switch (step.type) {
         case 'slide': mark('view', { slide: step.slide }); await sleep(SLIDE_HOLD); break;
-        case 'window': current = windows[step.name]; mark('view', { window: step.name }); await sleep(SLIDE_HOLD); break;
+        case 'window':
+          current = windows[step.name];
+          if (current.pending) { log(`${current.name}: opening ${current.conv.url}`); try { await openPending(current, windows); } catch (e) { fail(`${step.where}: ${e.message}`); } }
+          mark('view', { window: step.name });
+          await sleep(SLIDE_HOLD);
+          break;
+        case 'prepare': break; // done before the chapter was filmed
         case 'wait': await sleep(step.seconds * 1000); break;
         case 'message': {
           if (!current.surface) fail(`${step.where}: ${current.name} has no chat to type in`);
@@ -179,7 +231,7 @@ export async function recordChapter(browser, demo, chapterNo, take, ctx) {
         }
         default:
           mark('do', { action: step.type, where: step.where });
-          log(`${current.name}: ${step.type} ${step.label || step.page || step.target || step.field || step.text || step.key || step.name || ''}`.trim());
+          log(`${current.name}: ${step.type} ${step.label || step.page || step.target || step.field || step.text || step.key || step.command || step.name || (step.code ? step.code.split('\n')[0] : '')}`.trim());
           try { await actions.runAction(current, step); } catch (e) { fail(`${step.where}: ${step.type}: ${e.message.split('\n')[0]}`); }
       }
     }
@@ -194,9 +246,14 @@ export async function recordChapter(browser, demo, chapterNo, take, ctx) {
     for (const [name, w] of Object.entries(windows)) await w.page.screenshot({ path: path.join(dir, `${name}-failed.png`) }).catch(() => {});
   } finally {
     for (const [name, w] of Object.entries(windows)) {
-      const video = w.page.video();
-      await w.context.close().catch(() => {});
-      if (video && result.windows[name]) result.windows[name].video = await video.path().catch(() => null);
+      let video = null;
+      if (w.finish) video = await w.finish().catch(() => null); // terminals and editors end what they started
+      else {
+        const v = w.page.video();
+        await w.context.close().catch(() => {});
+        video = v ? await v.path().catch(() => null) : null;
+      }
+      if (video && result.windows[name]) result.windows[name].video = video;
     }
     fs.writeFileSync(path.join(dir, 'events.json'), JSON.stringify(result, null, 1));
   }

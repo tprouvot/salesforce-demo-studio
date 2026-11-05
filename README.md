@@ -1,8 +1,8 @@
 # Salesforce demo studio (`sfdemo`)
 
 Records your Salesforce demos for you, in one video: your slides, a voice-over read by a natural-sounding voice in
-your language, and the live part (Setup pages, records, Experience Cloud sites, Agentforce chats) played in a
-real browser while the voice explains it. You write what to say and what to show in one text file, or ask Claude to
+your language, and the live part (Setup pages, records, Experience Cloud sites, Agentforce chats, and the work
+around them in a terminal, VS Code or Cursor) played for real while the voice explains it. You write what to say and what to show in one text file, or ask Claude to
 write it; `sfdemo` does the rest, the same way every time, and gives you an MP4 with chapters and subtitles.
 
 It also records Agentforce conversations on their own (screenshots, a short video, a GIF, a transcript and a
@@ -114,6 +114,26 @@ recorded again on its own: `sfdemo demo demos/tour.md --only 2 --retake`.
 What it does in your org is what the script says: it signs in, opens pages and clicks. Script only what you want to
 happen (no Save or Delete unless that is the demo).
 
+### A terminal, VS Code or Cursor in the demo
+
+A window can also be a terminal, VS Code or Cursor, on a folder of your machine:
+
+```markdown
+windows:
+  Shell: { terminal: ~/projects/acme }
+  Code: { vscode: ~/projects/acme, files: [README.md] }
+
+# Deploy
+
+- window: Shell
+- run: sf project deploy start --target-org myOrg
+```
+
+`run:` types a command and runs it for real, `open:` opens a file in the editor, `command:` runs a command of its
+Command Palette, a code block is typed into the open file. The editors run with a profile of their own, signed in
+to nothing: your extensions and recent files stay out of the video. Cursor needs a login once, by you:
+`sfdemo editor cursor`. All of it: [docs/DEMOS.md](docs/DEMOS.md#terminal-vs-code-and-cursor-windows).
+
 ## Agentforce conversations on their own
 
 `sfdemo new` finds your agent in the org and writes `scenarios/<agent>.md`, with what the agent can do (its topics
@@ -191,6 +211,7 @@ Login-As needs "Administrators Can Log in as Any User" (Setup > Login Access Pol
 | `sfdemo narrate <demo.md>` | the voice-over alone: every line read once, the length of each chapter |
 | `sfdemo voices` | the voices: `--language fr`, `--try <voice> --play`, `--download <voice>`, `--installed` |
 | `sfdemo notes <demo.md>` | what each slide's speaker notes should say (`--json` for the demo-deck skill) |
+| `sfdemo editor vscode \| cursor` | opens the editor with the profile demos film it in: log in to Cursor there once, try an extension |
 | `sfdemo init` | a new project folder: `sfdemo.config.json`, `scenarios/`, `.gitignore` entries |
 | `sfdemo new [name]` | a scenario to start from: settings checked in the org, the agent's topics and actions listed in it; `--json` prints them |
 | `sfdemo run [files]` | record (default: every scenario in `scenarios/`); `--dry-run`, `--only <name>`, `--headed` to watch |

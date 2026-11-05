@@ -25,10 +25,15 @@ export async function moveCursor(page, x, y) {
   }, [x, y]).catch(() => {});
 }
 
+/** Pages that never load anything to wait for (editor windows, terminals): a beat for the viewer is enough. */
+export const quietPages = new WeakSet();
+
 /** Lets the page settle after an action: its load, then a beat for the viewer. */
 export async function settle(page, ms = 1200) {
-  await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
-  await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  if (!quietPages.has(page)) {
+    await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});
+  }
   await sleep(ms);
 }
 
@@ -207,8 +212,12 @@ export async function apex(w, code) {
   await sleep(2500);
 }
 
-/** Runs one live step (not a message or a check) in window `w`. */
+/**
+ * Runs one live step (not a message or a check) in window `w`. A terminal or editor window plays its own steps
+ * first (run, type, open a file, a command...); what it leaves (click, point, wait for...) works on any page.
+ */
 export async function runAction(w, step) {
+  if (w.act && await w.act(step)) return undefined;
   switch (step.type) {
     case 'open': return open(w, step.target);
     case 'setup': return setup(w, step.page);
@@ -217,6 +226,7 @@ export async function runAction(w, step) {
     case 'fill': return fill(w, step.field, step.value);
     case 'select': return select(w, step.field, step.value);
     case 'press': return press(w, step.key);
+    case 'type': await w.page.keyboard.type(String(step.text), { delay: TYPE_DELAY }); return sleep(400);
     case 'scroll': return scroll(w, step.target);
     case 'wait-for': return waitFor(w, step.text);
     case 'point': return point(w, step.label);

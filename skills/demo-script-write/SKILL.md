@@ -1,6 +1,6 @@
 ---
 name: demo-script-write
-description: Writes or improves an sfdemo demo script (demos/<name>.md) - the chapters, the narration the voice reads, and the live steps in Lightning, Setup, Experience Cloud sites and Agentforce chats - from the user's goal and from what the Salesforce org really has, in the user's language, then checks it with sfdemo narrate. Use when the user wants a demo script, a voice-over text, a talk track or speaker notes written for a Salesforce demo, or wants an existing demo script shortened, translated or fixed.
+description: Writes or improves an sfdemo demo script (demos/<name>.md) - the chapters, the narration the voice reads, and the live steps in Lightning, Setup, Experience Cloud sites, Agentforce chats, a terminal, VS Code or Cursor - from the user's goal and from what the Salesforce org really has, in the user's language, then checks it with sfdemo narrate. Use when the user wants a demo script, a voice-over text, a talk track or speaker notes written for a Salesforce demo, or wants an existing demo script shortened, translated or fixed.
 ---
 
 # Writing a demo script
@@ -18,6 +18,9 @@ Read before you write, and only read (no data changes):
 - An Agentforce agent: `sfdemo new --org <alias> --json` lists its topics and actions: script questions it can answer.
 - People: users for Login-As (`windows:` with `user:`), Experience Cloud members (`site:` plus `user:`), guests.
 - When unsure of a label, open the page once with Playwright or `--headed` and read it; do not guess.
+- A terminal, VS Code or Cursor part: read the project folder, and run each command once yourself, off camera, to
+  know what it prints, how long it takes and that it ends well (`run:` fails the take on an error). Use the names
+  the Command Palette shows for `command:` (`SFDX: Deploy This Source to Org`).
 
 ## 2. Write it
 
@@ -33,6 +36,12 @@ Read before you write, and only read (no data changes):
   a name), `click:`, `point:` (show without clicking), `scroll:`, `fill:`, `select:`, `wait for:`, chat messages
   (`1. ...`) with `- expect:` checks, an ```` ```apex ```` block, and `ai:` for a step that is easier said than
   pinned down (resolved once by Claude, saved next to the demo).
+- **Terminal, VS Code, Cursor** windows (`{ terminal: <folder> }`, `{ vscode: <folder>, files: [...] }`): `run:`
+  (waits for the end), `start:` (a server: then `wait for:` its output, `press: Control+C` to stop it), `type:`,
+  `open:` (a file, through Quick Open), `command:` (the Command Palette), a code block (typed into the open file,
+  or run line by line in a terminal). A web window with `from: <terminal>` opens the link that terminal printed.
+- **The same start every take**: a chapter that changes files gets `prepare:` lines (off camera, before each take):
+  reset the folder, copy a template, check out a branch. Each chapter names its window before its first step.
 - **Safe by default**: show, do not change. No Save, Delete, Deploy, Send or Activate unless the user asked for
   that action in the demo, and then in an org they named for it.
 - **Their language**: write the narration in the voice's language, with `filler:` and `retry:` lines in it too

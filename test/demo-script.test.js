@@ -97,7 +97,7 @@ test('step errors name the line and what is missing', () => {
   assert.throws(() => demo('- slide: first'), /tour\.md:7: "slide:" needs a slide number/);
   assert.throws(() => demo('- window: Admin\n- fill: Subject'), /write "fill: Field = value"/);
   assert.throws(() => demo('- window: Admin\n- record: Account'), /write "record: <object> <record name>"/);
-  assert.throws(() => demo('- window: Admin\n```js\nx\n```'), /a code block in a demo is Apex/);
+  assert.throws(() => demo('- window: Admin\n```js\nx\n```'), /a browser window runs only ```apex/);
   assert.throws(() => demo('- window: Admin\n```apex\nx'), /the ```apex block is not closed/);
 });
 

@@ -1,0 +1,107 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>fake editor</title>
+<style>
+  body { margin: 0; font: 13px sans-serif; background: #1e1e1e; color: #ddd; }
+  .monaco-workbench { position: absolute; inset: 0; }
+  .tabs-container { display: flex; gap: 4px; padding: 4px; height: 24px; }
+  .tab { padding: 2px 8px; background: #333; } .tab.active { background: #555; }
+  textarea.inputarea { position: absolute; top: 40px; left: 10px; width: 60%; height: 40%; background: #111; color: #eee; }
+  .quick-input-widget { position: absolute; top: 20px; left: 30%; width: 40%; background: #252526; padding: 6px; }
+  .quick-input-widget input { width: 100%; }
+  .monaco-list-row { padding: 3px; cursor: pointer; } .monaco-list-row:hover { background: #094771; }
+  .terminal-wrapper { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; background: #181818; font: 13px monospace; }
+  .xterm-rows div { white-space: pre; min-height: 16px; }
+  #wall { position: absolute; inset: 0; background: #222; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+  [hidden] { display: none !important; }
+</style></head>
+<body><div class="monaco-workbench">
+  <div class="tabs-container"></div>
+  <textarea class="inputarea" hidden></textarea>
+  <div id="shout"></div>
+  <div class="quick-input-widget" hidden><input class="input"><div class="quick-input-list"></div></div>
+  <div class="terminal-wrapper active" hidden><div class="xterm" tabindex="0"><div class="xterm-screen"><div class="xterm-rows"></div></div></div></div>
+  <div id="wall" hidden><button>Log In</button><button>Sign Up</button></div>
+</div>
+<script>
+  // A stand-in for VS Code's workbench, for the tests: Quick Open, the Command Palette (exact rows), an editor that
+  // keeps what is typed per file, and a terminal with the prompt of sfdemo's demo profile ("folder $").
+  const q = new URLSearchParams(location.search);
+  const folder = (q.get('folder') || '/work/app').split('/').filter(Boolean).pop();
+  if (q.get('wall') === '1') document.getElementById('wall').hidden = false;
+  const FILES = ['src/greet.js', 'README.md', 'notes.md'];
+  window.__files = {}; window.__saved = {}; window.__ran = []; window.__shouts = [];
+  let current = null;
+  const $ = s => document.querySelector(s);
+  const quick = $('.quick-input-widget'), input = quick.querySelector('input'), list = quick.querySelector('.quick-input-list');
+  const editor = $('textarea.inputarea'), tabs = $('.tabs-container');
+  const term = $('.terminal-wrapper'), rows = $('.xterm-rows'), xterm = $('.xterm');
+  const COMMANDS = {
+    'Fake: Shout Louder': () => window.__shouts.push('louder'),
+    'Fake: Shout': () => window.__shouts.push('shout'),
+    'Notifications: Clear All Notifications': () => {},
+    'View: Close All Editors': () => { tabs.innerHTML = ''; editor.hidden = true; current = null; },
+    'View: Toggle Terminal': () => toggleTerminal(),
+    'Terminal: Create New Terminal': () => toggleTerminal(true),
+    'File: Save': () => { if (current) window.__saved[current] = editor.value; },
+  };
+  function openQuick(prefix) { quick.hidden = false; input.value = prefix; render(); input.focus(); }
+  function closeQuick() { quick.hidden = true; list.innerHTML = ''; }
+  function render() {
+    const v = input.value;
+    const isCmd = v.startsWith('>');
+    const needle = (isCmd ? v.slice(1) : v).trim().toLowerCase();
+    const items = isCmd ? Object.keys(COMMANDS).filter(c => c.toLowerCase().includes(needle)).map(c => ({ label: c, aria: c, run: () => COMMANDS[c]() }))
+      : FILES.filter(f => !needle || f.toLowerCase().includes(needle.replace(/:\d+$/, ''))).map(f => ({ label: f, aria: `${f.split('/').pop()}, ${f}`, run: () => openFile(f) }));
+    list.innerHTML = '';
+    for (const it of items) {
+      const r = document.createElement('div');
+      r.className = 'monaco-list-row'; r.setAttribute('aria-label', it.aria); r.textContent = it.label;
+      r.onclick = () => { closeQuick(); it.run(); };
+      list.appendChild(r);
+    }
+    list.__items = items;
+  }
+  input.addEventListener('input', render);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const it = (list.__items || [])[0]; closeQuick(); if (it) it.run(); e.preventDefault(); }
+  });
+  function openFile(f) {
+    if (current) window.__files[current] = editor.value;
+    current = f;
+    tabs.innerHTML = '';
+    const t = document.createElement('div'); t.className = 'tab active'; t.textContent = f.split('/').pop(); tabs.appendChild(t);
+    editor.hidden = false; editor.value = window.__files[f] || ''; editor.focus();
+  }
+  editor.addEventListener('input', () => { if (current) window.__files[current] = editor.value; });
+  // the terminal
+  let line = null, failed = 0;
+  const prompt = () => { line = document.createElement('div'); line.dataset.prompt = `${failed ? `✗ ${failed} ` : ''}${folder} $ `; line.textContent = line.dataset.prompt; rows.appendChild(line); failed = 0; };
+  const print = text => { for (const l of String(text).split('\n')) { const d = document.createElement('div'); d.textContent = l; rows.appendChild(d); } };
+  function toggleTerminal(show) {
+    term.hidden = show === undefined ? !term.hidden : !show;
+    if (!term.hidden) { if (!rows.children.length) setTimeout(prompt, 300); xterm.focus(); }
+  }
+  xterm.addEventListener('keydown', e => {
+    if (!line) return;
+    if (e.ctrlKey && e.key === 'c') { line.textContent += '^C'; prompt(); e.preventDefault(); return; }
+    if (e.key === 'Enter') {
+      const cmd = line.textContent.slice(line.dataset.prompt.length).trim();
+      window.__ran.push(cmd);
+      line = null;
+      const done = (out, code = 0) => { if (out) print(out); failed = code; prompt(); };
+      if (cmd === 'ls') done(FILES.map(f => f.split('/').pop()).join('  '));
+      else if (cmd === 'false') done('', 1);
+      else if (cmd === 'slow') setTimeout(() => done('done slow'), 1500);
+      else done(`ran: ${cmd}`);
+      e.preventDefault(); return;
+    }
+    if (e.key === 'Backspace') { if (line.textContent.length > line.dataset.prompt.length) line.textContent = line.textContent.slice(0, -1); e.preventDefault(); return; }
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { line.textContent += e.key; e.preventDefault(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F1') { openQuick('>'); e.preventDefault(); }
+    else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') { openQuick(''); e.preventDefault(); }
+    else if (e.ctrlKey && (e.code === 'Backquote' || e.key === '`')) { toggleTerminal(); e.preventDefault(); }
+    else if (e.key === 'Escape') closeQuick();
+  }, true);
+</script></body></html>

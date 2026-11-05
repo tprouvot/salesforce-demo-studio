@@ -34,6 +34,10 @@ Three kinds of lines:
   something fails.
 - **A list item (`-`, `1.`), or a line starting with a step word and a colon, is a live step.**
 
+A code block (```` ``` ````) belongs to the window above it: Apex runs in the Developer Console of a Salesforce
+window, shell lines run one after the other in a terminal window, and any code is typed into the open file of a
+VS Code or Cursor window.
+
 HTML comments (`<!-- -->`) and lines starting with `>` are notes for you: never spoken, never played.
 
 ## Settings (front matter)
@@ -67,6 +71,10 @@ own, and shows `label` in a corner of the video (the window's name by default).
 | An Experience Cloud site | `{ site: https://example.my.site.com/s/ }` | a guest |
 | The site, signed in | `{ site: ..., user: rider.lane }` | Login-As to the site (an Experience Cloud user) |
 | Any web page | `{ url: https://github.com/... }` | nobody |
+| A page whose link a terminal printed | `{ url: http://127.0.0.1:4477/, from: Shell }` | what the link carries (a token) |
+| A terminal | `{ terminal: ~/my-project }` | you, on this machine |
+| VS Code | `{ vscode: ., files: [README.md] }` | nobody: a profile of its own, signed in to nothing |
+| Cursor | `{ cursor: ., files: [src/app.ts] }` | the Cursor login you make once (`sfdemo editor cursor`) |
 
 A window that receives a chat message (`1. ...`) opens its chat off camera: the Agentforce panel in Lightning, the
 Embedded Messaging widget on a site (with a first "Hi" to open the conversation; `warmup: false` to skip it).
@@ -87,11 +95,19 @@ Development orgs can use `credentials:` (a file of usernames and passwords), as 
 | `fill: Subject = Leaking faucet` | types into the field labeled Subject, one key at a time |
 | `select: Status = Active` | picks an option (a list or a Lightning combobox) |
 | `press: Enter` | presses a key |
-| `wait for: Saved` | waits until the text shows |
+| `wait for: Saved` | waits until the text shows (in a terminal: until a command prints it) |
 | `wait: 2` | holds two seconds |
+| `type: Acme` | types into what has the focus; in a terminal, into the command that runs (it asked a question) |
+| `run: npm test` | terminal and editor windows: types the command, runs it, waits for its end; an error ends the take |
+| `start: sfdemo ui` | the same without waiting (a server): the next steps happen while it runs; `press: Control+C` stops it |
+| `open: src/app.js:12` | VS Code and Cursor: opens the file through Quick Open (`:12` goes to line 12) |
+| `command: File: Save` | VS Code and Cursor: runs a command of the Command Palette, by its name there |
+| `prepare: cp -R template/ work/` | runs a command off camera before the chapter is filmed, each take (below) |
 | `1. How much is a ride?` | types a message into the window's chat and waits for the answer |
 | `   - expect: \$8` | checks the answer (also `expect-not:`, `expect-button:`, `max-seconds:`); a failed check retries the chapter |
 | ```` ```apex ```` block | runs the Apex in the Developer Console (Execute Anonymous), then shows its debug lines |
+| ```` ```sh ```` block, in a terminal | runs each line, as `run:` does (lines starting with `#` are not run) |
+| a code block, in an editor | types it into the open file where the cursor is, line by line (each line ends with Enter), indented as written |
 | `ai: open the newest case of Acme` | Claude turns the sentence into the steps above, once; see below |
 
 A paragraph right after a chat message plays while the agent answers: the checks under the message wait for the
@@ -104,6 +120,81 @@ Claude Code on your machine (`claude -p`, your own login), to turn it into fixed
 The answer is saved next to the script, in `<name>.ai-steps.json`: every later take replays it with no call, so the
 demo stays repeatable. Commit that file with the script; edit it, or replace the `ai:` line with fixed steps, when
 Claude got it wrong.
+
+## Terminal, VS Code and Cursor windows
+
+A demo can show the work around Salesforce too: a command line, a project in VS Code or Cursor. These windows run
+on your machine, for real, in the folder they name (relative to the script: `.` is the script's folder; `~` is your
+home folder).
+
+````markdown
+---
+type: demo
+title: Deploy from VS Code
+windows:
+  Shell: { terminal: ~/projects/acme, label: "Terminal" }
+  Code: { vscode: ~/projects/acme, files: [force-app/main/default/classes/Invoice.cls] }
+  Admin: { org: myOrg, path: /lightning/setup/ApexClasses/home }
+---
+
+# The class, in VS Code
+
+- prepare: cd ~/projects/acme && git checkout -- .
+- window: Code
+
+Here is the class. We add one line to it.
+
+- open: force-app/main/default/classes/Invoice.cls:12
+```apex
+    public Decimal total { get; set; }
+```
+- command: File: Save
+
+# Deployed from the terminal
+
+- window: Shell
+- run: sf project deploy start --source-dir force-app --target-org myOrg
+- wait for: Deploy Succeeded
+````
+
+**A terminal window** is drawn by sfdemo and filmed like the other windows. Each command is typed at the prompt one
+key at a time, then runs in a real terminal (colours, spinners and progress bars show as they do for you; on
+Windows, without them). `cd <folder>` and `clear` work as in a shell; each other command runs on its own, so a
+variable set by one is not seen by the next. `sfdemo` in it is the sfdemo that records. A terminal runs one
+command at a time: stop a server with `press: Control+C` before the next `run:`, or give it a second terminal
+window. Settings: `label`, `title` (its title bar), `prompt` (what the prompt shows: the folder's name by default),
+`theme` (`dark` or `light`).
+
+**A VS Code or Cursor window** is the real application, started for the recording with a profile of its own
+(`~/.sfdemo/editors/vscode`, `~/.sfdemo/editors/cursor`), never yours: your extensions, notifications and recent
+files do not show, and your own editor can stay open. Its window opens on your screen while it is filmed: leave it
+alone until the chapter ends. `open:` uses Quick Open, `command:` the Command Palette (by the name it shows
+there), a code block is typed into the open file (the profile adds no brackets, indentation or suggestions of its
+own), and `run:` types the command in the integrated terminal. `click:`, `point:`, `wait for:`, `press:` and
+`scroll:` work there as on any page. Settings:
+
+| Setting | What it does |
+| --- | --- |
+| `vscode:` / `cursor:` | the folder to open |
+| `files` | files open when the chapter starts |
+| `extensions` | Marketplace ids (`salesforce.salesforcedx-vscode`): installed in the demo profile the first time, the only ones on; none by default |
+| `settings` | VS Code settings for this window: `{ "editor.fontSize": 18 }` |
+| `theme`, `zoom` | the colour theme (`Default Light Modern`), the zoom level: `1` (120 %, easier to read in a video) by default, `0` for 100 % |
+
+sfdemo never signs in to anything in these editors. In VS Code, the profile turns its AI features off, so no
+GitHub or Copilot sign-in comes up. Cursor does not open without its own login: once, run `sfdemo editor cursor`,
+log in in the window it opens, and close it; demos then use that login. `sfdemo editor vscode` opens VS Code's demo
+profile the same way, to look at it or try an extension. Use `command:` for shortcuts when you can: `press:`
+sends keys as on a US keyboard.
+
+**`prepare:` gives each take the same start.** A chapter that changes files (a `sfdemo init`, a typed and saved
+file, a deploy) leaves them changed for its next take. `prepare:` lines run, off camera, before each take of their
+chapter, in the script's folder: copy a template, reset a folder, check out a branch. A `prepare:` that fails ends
+the take before anything is filmed.
+
+**What runs is what the script says**, on your machine, with your files and your logins (the sf CLI's, git's):
+script only what you want to happen. Each chapter is recorded on its own (and again when it fails), so each one
+names its window before its first live step.
 
 ## Speaker notes
 
