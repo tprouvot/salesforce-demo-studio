@@ -7,8 +7,8 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { parseArgs } from './args.js';
 import { loadProject, homeDir } from '../config.js';
-import { readDemo, speakerNotes } from '../demo/script.js';
-import { narrate, catalogue, installedVoices, downloadVoice, synthesize, findPiper, sampleUrl } from '../demo/voice.js';
+import { readDemo, speakerNotes, demoDefaults, DEFAULT_VOICE } from '../demo/script.js';
+import { narrate, catalogue, installedVoices, downloadVoice, synthesize, findPiper, findVoice, sampleUrl, languageOf } from '../demo/voice.js';
 import { recordDemo, isLive } from '../demo/recorder.js';
 import { assembleDemo, missingSlides } from '../demo/assemble.js';
 import { InputBroker, promptOnTerminal } from '../engine/input.js';
@@ -49,7 +49,7 @@ async function narrateCommand(argv) {
   const args = parseArgs(argv, { org: 'string', config: 'string' });
   if (!args._[0]) throw new Error('usage: sfdemo narrate <demo.md>');
   const project = loadProject({ file: args.config });
-  const demo = readDemo(args._[0], { org: args.org });
+  const demo = readDemo(args._[0], { org: args.org, defaults: demoDefaults(project) });
   const paths = demoPaths(project, demo);
   const r = await narrate(demo, { cacheDir: paths.cacheDir, onLine: e => out(`  ${e.n}/${e.total} ${e.seconds.toFixed(1)} s  ${e.text.slice(0, 80)}`) });
   describeDemo(demo).forEach(out);
@@ -63,7 +63,7 @@ async function demoCommand(argv) {
   const args = parseArgs(argv, { org: 'string', only: 'list', retake: 'boolean', headed: 'boolean', 'no-video': 'boolean', 'video-only': 'boolean', config: 'string' });
   if (!args._[0]) throw new Error('usage: sfdemo demo <demo.md> [--org <alias>] [--only 2,3] [--retake] [--video-only]');
   const project = loadProject({ file: args.config });
-  const demo = readDemo(args._[0], { org: args.org });
+  const demo = readDemo(args._[0], { org: args.org, defaults: demoDefaults(project) });
   const paths = demoPaths(project, demo);
   fs.mkdirSync(paths.out, { recursive: true });
   out(`voice-over (${demo.settings.voice})...`);
@@ -127,19 +127,53 @@ function playWav(file) {
 }
 
 async function notesCommand(argv) {
-  const args = parseArgs(argv, { json: 'boolean' });
+  const args = parseArgs(argv, { json: 'boolean', config: 'string' });
   if (!args._[0]) throw new Error('usage: sfdemo notes <demo.md> [--json]');
-  const notes = speakerNotes(readDemo(args._[0]));
+  const notes = speakerNotes(readDemo(args._[0], { defaults: demoDefaults(loadProject({ file: args.config })) }));
   if (args.json) { out(JSON.stringify(notes, null, 1)); return 0; }
   for (const n of notes) out(`--- slide ${n.slide}\n${n.notes || '(no narration on this slide)'}\n`);
   return 0;
 }
 
 /**
- * The voice part of `sfdemo setup`: Piper and at least one voice. With `install`, Piper goes into its own Python
- * environment (~/.sfdemo/piper) and the default voice is downloaded.
+ * Asks which voice the demos use: a language, then one of its voices (`ask` is a readline question). Returns a
+ * voice key; `current` when the catalogue cannot be read or the answer matches nothing.
+ * @param {{ ask: (q: string) => Promise<string>, current?: string }} options
  */
-export async function setupVoice({ install, line }) {
+export async function chooseVoice({ ask, current = DEFAULT_VOICE }) {
+  let list;
+  try { list = await catalogue(); } catch (e) { out(`(the list of voices cannot be read: ${e.message}; the demos use ${current})`); return current; }
+  out('\nThe voice that reads your demos (change it any time: sfdemo ui, or voice: in a script).');
+  const langs = [...new Set(list.map(v => v.language))];
+  const common = ['en_US', 'en_GB', 'fr_FR', 'de_DE', 'es_ES', 'it_IT', 'pt_BR', 'nl_NL'].filter(l => langs.includes(l));
+  const said = (await ask(`  Language (${common.join(', ')}, or another of the ${langs.length}; Enter: ${languageOf(current)}): `)).trim().toLowerCase();
+  const lang = langs.find(l => l.toLowerCase() === (said || languageOf(current).toLowerCase())) || (said ? langs.find(l => l.toLowerCase().startsWith(said)) : null);
+  if (!lang) { out(`  no voice in "${said}": the demos use ${current}`); return current; }
+  const voices = list.filter(v => v.language === lang);
+  const installed = new Set(installedVoices().map(v => v.key));
+  const mine = voices.findIndex(v => v.key === current);
+  const fallback = mine >= 0 ? mine : Math.max(0, voices.findIndex(v => !/low/.test(v.quality)));
+  voices.forEach((v, i) => out(`  ${String(i + 1).padStart(2)}. ${v.name} (${v.quality}${v.speakers > 1 ? `, ${v.speakers} speakers` : ''})${installed.has(v.key) ? ' ✓ installed' : v.sizeBytes ? `, ${Math.round(v.sizeBytes / 1e6)} MB` : ''}`));
+  const n = Number((await ask(`  Voice number (hear one first: sfdemo voices --try ${voices[fallback].key} --play; Enter: ${voices[fallback].name}): `)).trim());
+  return (voices[n - 1] || voices[fallback]).key;
+}
+
+/** Downloads `voice` when it is not on this machine yet; says so, and never fails the command for it. */
+export async function ensureVoice(voice) {
+  if (findVoice(voice)) return true;
+  try {
+    out(`downloading the voice ${voice}...`);
+    await downloadVoice(voice, { onProgress: p => out(`  ${p.file}: ${(p.bytes / 1e6).toFixed(1)} MB`) });
+    return true;
+  } catch (e) { out(`  not downloaded now (${e.message}): sfdemo setup --voice does it later`); return false; }
+}
+
+/**
+ * The voice part of `sfdemo setup`: Piper and the project's voice. With `install`, Piper goes into its own Python
+ * environment (~/.sfdemo/piper) and the voice is downloaded.
+ * @param {{ install: boolean, line: (good: boolean, name: string, detail: string) => void, voice?: string }} options
+ */
+export async function setupVoice({ install, line, voice = DEFAULT_VOICE }) {
   let piper = findPiper();
   if (!piper && install) {
     const python = process.platform === 'win32' ? 'python' : 'python3';
@@ -150,11 +184,10 @@ export async function setupVoice({ install, line }) {
     if (await run(python, ['-m', 'venv', venv]) && await run(pip, ['install', '--quiet', 'piper-tts'])) piper = findPiper();
   }
   line(!!piper, 'Piper voice engine', piper || `missing: sfdemo setup --voice installs it (it needs Python 3: ${process.platform === 'darwin' ? 'brew install python' : 'python.org'})`);
-  let voices = installedVoices();
-  if (piper && !voices.length && install) {
-    try { await downloadVoice('en_US-ryan-high'); voices = installedVoices(); } catch (e) { out(`  could not download the default voice: ${e.message}`); }
-  }
-  line(!!voices.length, 'voices', voices.length ? `${voices.map(v => v.key).join(', ')}` : 'none yet: sfdemo voices --download en_US-ryan-high');
+  if (piper && install) await ensureVoice(voice);
+  const voices = installedVoices();
+  line(!!findVoice(voice), 'voice', findVoice(voice) ? `${voice}${voices.length > 1 ? ` (also installed: ${voices.filter(v => v.key !== voice).map(v => v.key).join(', ')})` : ''}`
+    : `${voice} not installed yet: sfdemo setup --voice${voices.length ? ` (installed: ${voices.map(v => v.key).join(', ')})` : ''}`);
 }
 
 export const DEMO_COMMANDS = { demo: demoCommand, narrate: narrateCommand, voices: voicesCommand, notes: notesCommand };

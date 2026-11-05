@@ -188,10 +188,13 @@ export async function assembleDemo(demo, { out, slidesDir, emit = () => {} }) {
       continue;
     }
     const duration = (await probeDuration(file)) || takeLength(take);
+    // a take keeps the voice-over it was timed with: a new voice or a reworded line needs the chapter recorded again
+    const stale = isLive(chapter) && JSON.stringify(take.events.filter(e => e.kind === 'say' && !e.filler).map(e => e.wav)) !== JSON.stringify(chapter.steps.filter(s => s.type === 'say').map(s => s.wav));
+    if (stale) emit({ type: 'warning', message: `chapter ${n} (${chapter.title}) was recorded with another voice-over (a new voice, or a line changed): record it again to match (--only ${n} --retake)` });
     marks.push({ start: at, title: chapter.title });
     for (const c of srtCues(take.events.filter(e => e.kind === 'say').map(e => ({ ...e, start: at + e.t })))) cues.push(c);
     parts.push(file);
-    report.push({ chapter: n, title: chapter.title, status: take.failed ? `from a failed take: ${take.reason}` : take.take ? `take ${take.take}` : 'slides', seconds: Math.round(duration) });
+    report.push({ chapter: n, title: chapter.title, status: `${take.failed ? `from a failed take: ${take.reason}` : take.take ? `take ${take.take}` : 'slides'}${stale ? ', with an earlier voice-over' : ''}`, seconds: Math.round(duration) });
     at += duration;
     const views = take.events.filter(e => e.kind === 'view');
     const last = views.at(-1);

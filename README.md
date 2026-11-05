@@ -67,6 +67,10 @@ mkdir my-demos && cd my-demos
 sfdemo init --org myOrg --example none
 ```
 
+`sfdemo init` asks which voice reads your demos: a language, then one of its voices (it downloads it). Every demo
+uses that voice unless its script names another; change it any time in `sfdemo ui` (Use for all new demos), or
+with `voice` in `sfdemo.config.json`.
+
 **2. The script**, `demos/tour.md`: paragraphs are what the voice says, headings are chapters, list items are what
 happens on screen.
 
@@ -74,7 +78,6 @@ happens on screen.
 ---
 type: demo
 title: Our Named Credentials
-voice: en_US-ryan-high
 windows:
   Admin: { path: /lightning/setup/SetupOneHome/home, label: "Admin · Setup" }
 ---
@@ -99,7 +102,7 @@ skill do it. No deck? Leave out the `slide:` lines: the demo is live only. Every
 **3. Listen, then record:**
 
 ```sh
-sfdemo voices --language en                  # pick a voice; --try <voice> --play to hear it
+sfdemo voices --language en                  # other voices; --try <voice> --play to hear one
 sfdemo narrate demos/tour.md                 # the voice-over: every line read once, each chapter's length
 sfdemo demo demos/tour.md                    # records the live parts and makes the video
 ```

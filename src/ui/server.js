@@ -26,7 +26,7 @@ import { writeHealBundle } from '../doctor/bundle.js';
 import { packStatus, updatePacks, promote } from '../selectors/manage.js';
 import { loadDenylist } from '../denylist.js';
 import YAML from 'yaml';
-import { readDemo, parseDemo, speakerNotes, lengthScale } from '../demo/script.js';
+import { readDemo, parseDemo, speakerNotes, lengthScale, demoDefaults } from '../demo/script.js';
 import { narrate, catalogue, installedVoices, synthesize } from '../demo/voice.js';
 import { recordDemo, isLive, bestTake } from '../demo/recorder.js';
 import { assembleDemo, missingSlides } from '../demo/assemble.js';
@@ -157,7 +157,7 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
   const runsUrl = (name, file) => `/runs/${encodeURIComponent(name)}/${encodeURIComponent(file)}`;
   const demoSummary = file => {
     try {
-      const demo = readDemo(inside(project.demosDir, file));
+      const demo = readDemo(inside(project.demosDir, file), { defaults: demoDefaults(project) });
       const { out } = demoPaths(project, demo);
       const has = f => fs.existsSync(path.join(out, f));
       return { file, name: demo.name, title: String(demo.settings.title || demo.name), voice: demo.settings.voice, chapters: demo.chapters.length, live: demo.chapters.filter(isLive).length,
@@ -168,7 +168,7 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
     const full = inside(project.demosDir, file);
     const text = fs.readFileSync(full, 'utf8');
     let demo;
-    try { demo = readDemo(full); } catch (e) { return { file, text, errors: [e.message] }; }
+    try { demo = readDemo(full, { defaults: demoDefaults(project) }); } catch (e) { return { file, text, errors: [e.message] }; }
     const paths = demoPaths(project, demo);
     return {
       file, text, errors: [], summary: demoSummary(file),
@@ -190,7 +190,7 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
   };
   const startDemo = body => {
     if (active && active.status === 'running') throw Object.assign(new Error(`a ${active.kind} is already running`), { status: 409 });
-    const demo = readDemo(inside(project.demosDir, body.file), { org: body.org || undefined });
+    const demo = readDemo(inside(project.demosDir, body.file), { org: body.org || undefined, defaults: demoDefaults(project) });
     const paths = demoPaths(project, demo);
     const missing = missingSlides(demo, paths.slidesDir);
     if (missing.length) throw Object.assign(new Error(`no image for slide(s) ${missing.join(', ')} in ${paths.slidesDir}: export the deck's slides there first`), { status: 400 });
@@ -217,7 +217,7 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
     'PUT /api/demo': (req, url, body) => {
       const file = inside(project.demosDir, body.file);
       if (!/\.md$/i.test(file)) throw Object.assign(new Error('a demo script ends with .md'), { status: 400 });
-      try { parseDemo(String(body.text || ''), file); } catch (e) { throw Object.assign(new Error(e.message), { status: 400 }); } // a script that does not read is not saved
+      try { parseDemo(String(body.text || ''), file, { defaults: demoDefaults(project) }); } catch (e) { throw Object.assign(new Error(e.message), { status: 400 }); } // a script that does not read is not saved
       fs.mkdirSync(path.dirname(file), { recursive: true });
       fs.writeFileSync(file, String(body.text || ''));
       return demoDetails(path.relative(project.demosDir, file));
@@ -225,7 +225,7 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
     'POST /api/demo/settings': (req, url, body) => {
       const file = inside(project.demosDir, body.file);
       const text = withSettings(fs.readFileSync(file, 'utf8'), { voice: body.voice, pace: body.pace });
-      try { parseDemo(text, file); } catch (e) { throw Object.assign(new Error(e.message), { status: 400 }); }
+      try { parseDemo(text, file, { defaults: demoDefaults(project) }); } catch (e) { throw Object.assign(new Error(e.message), { status: 400 }); }
       fs.writeFileSync(file, text);
       return demoDetails(path.relative(project.demosDir, file));
     },
@@ -240,8 +240,14 @@ export async function startServer({ project, port = 4477, host = '127.0.0.1' }) 
       const r = await synthesize({ text: String(body.text || 'Hello, this is how I sound when I present your demo.').slice(0, 400), voice: body.voice, lengthScale: lengthScale(body.pace || 'presenter'), cacheDir: path.join(project.stateDir, 'narration') });
       return { url: `/voice-samples/${path.basename(r.wav)}`, seconds: r.duration };
     },
+    'POST /api/demo/default-voice': (req, url, body) => {
+      if (!/^[A-Za-z]{2,3}_[A-Za-z]{2}-[\w]+-[a-z_]+$/.test(String(body.voice || ''))) throw Object.assign(new Error('not a voice name'), { status: 400 });
+      lengthScale(body.pace || project.config.pace); // a bad pace is an error before anything is written
+      saveConfig(project, { voice: body.voice, ...(body.pace ? { pace: body.pace } : {}) });
+      return { voice: project.config.voice, pace: project.config.pace };
+    },
     'POST /api/demo/narrate': async (req, url, body) => {
-      const demo = readDemo(inside(project.demosDir, body.file));
+      const demo = readDemo(inside(project.demosDir, body.file), { defaults: demoDefaults(project) });
       const paths = demoPaths(project, demo);
       const r = await narrate(demo, { cacheDir: paths.cacheDir });
       return { plan: describeDemo(demo), seconds: r.seconds, lines: r.lines, missing: missingSlides(demo, paths.slidesDir) };

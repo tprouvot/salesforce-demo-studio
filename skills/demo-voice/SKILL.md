@@ -6,7 +6,8 @@ description: Chooses and tunes the narrator of an sfdemo demo - the language, a 
 # The narrator
 
 `sfdemo` reads the narration with [Piper](https://github.com/OHF-Voice/piper1-gpl), on the user's machine:
-nothing is sent anywhere. One voice per demo, set in the demo's front matter. Setup: `sfdemo setup --voice`.
+nothing is sent anywhere. One voice per demo: the project's (`voice` in sfdemo.config.json, asked by `sfdemo init`),
+or the one the demo's front matter names. Setup: `sfdemo setup --voice` installs Piper and the project's voice.
 
 ## Pick a voice
 
@@ -18,12 +19,15 @@ sfdemo voices --try fr_FR-siwis-medium --text "Bonjour, voici la démonstration.
 - Offer two or three voices of their language and let them listen; `--try` downloads the voice (30 to 120 MB)
   the first time. `high` and `medium` qualities sound best; `low` is smaller.
 - `sfdemo voices --json` also gives each voice's sample on Hugging Face, for a quick listen in a browser.
-- Then set it: `voice: fr_FR-siwis-medium` in the demo's front matter.
+- Then set it: `voice: fr_FR-siwis-medium` in the demo's front matter, or for every demo of the project: `voice` in
+  `sfdemo.config.json` (`sfdemo ui`: Use for all new demos).
+- Voices sound more natural at `pace: normal`; `presenter` (the default) is slower, for a dense demo. When the user
+  finds a voice robotic, try `normal` first, then another voice: `medium` voices often sound as good as `high` ones.
 
 ## Tune it
 
 ```yaml
-voice: en_US-ryan-high
+voice: en_US-amy-medium
 pace: presenter      # slow, presenter (the default), normal, brisk, or a number (1 = the voice's own speed)
 pause: 0.7           # seconds of silence between two paragraphs
 say:                 # how to read a word: whole words, case-sensitive

@@ -16,6 +16,17 @@
       "type": "string",
       "description": "Folder of demo scripts (.md), relative to this file. Default: demos"
     },
+    "voice": {
+      "type": "string",
+      "description": "The Piper voice of every demo that names none (sfdemo voices lists them). Default: en_US-amy-medium"
+    },
+    "pace": {
+      "type": [
+        "string",
+        "number"
+      ],
+      "description": "The pace of every demo that sets none: slow, presenter, normal, brisk, or a number. Default: presenter"
+    },
     "recordings": {
       "type": "string",
       "description": "Folder that receives one sub-folder per run, relative to this file. Default: .local/recordings"

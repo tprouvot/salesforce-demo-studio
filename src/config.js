@@ -21,6 +21,8 @@ export const DEFAULT_PACKS_URL = 'https://raw.githubusercontent.com/tprouvot/sal
 const DEFAULTS = {
   scenarios: 'scenarios',
   demos: 'demos',
+  voice: 'en_US-amy-medium',
+  pace: 'presenter',
   recordings: '.local/recordings',
   defaults: {},
   parallel: 3,

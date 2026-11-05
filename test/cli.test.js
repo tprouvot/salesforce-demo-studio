@@ -202,14 +202,44 @@ test('demos on the command line: the speaker notes, the voice-over plan, the voi
     assert.equal(notes.out, '--- slide 1\nHello and welcome.\n\n--- slide 2\nThank you.\n\n');
     const plan = run('narrate', 'demos/intro.md');
     assert.equal(plan.code, 0, plan.err);
-    assert.match(plan.out, /intro: 2 chapter\(s\), voice en_US-ryan-high\n {3}1\. Welcome: slides, \d+ s of voice-over\n {3}2\. Close: slides/);
+    assert.match(plan.out, /intro: 2 chapter\(s\), voice en_US-amy-medium\n {3}1\. Welcome: slides, \d+ s of voice-over\n {3}2\. Close: slides/);
     assert.match(plan.out, /2 spoken paragraph\(s\)/);
     assert.match(plan.out, /slide image\(s\) still to export: 1, 2/);
-    assert.match(run('voices', '--installed').out, /^en_US-ryan-high +en_US/m);
+    assert.match(run('voices', '--installed').out, /^en_US-amy-medium +en_US/m);
     const missing = run('demos/intro.md');
     assert.equal(missing.code, 2, 'a demo file given as is is played as a demo');
     assert.match(missing.err, /no image for slide\(s\) 1, 2 in .*demos\/slides: export the deck's slides there first/);
     const bad = run('narrate', path.join(cwd, 'demos', 'nope.md'));
     assert.equal(bad.code, 2);
+  } finally { piper.restore(); }
+});
+
+test('init: the voice of the demos, given with --voice or asked (a language, then a voice), saved in the config', async () => {
+  const { installFakePiper } = await import('./helpers/fake-piper.js');
+  const piper = installFakePiper(['en_US-amy-medium', 'fr_FR-siwis-low']);
+  // the catalogue, as cached by an earlier download: init reads it without the network
+  const voice = (key, name, quality, language, country) => ({ key, name, quality, num_speakers: 1, language: { code: key.split('-')[0], name_english: language, country_english: country }, files: { [`x/${key}.onnx`]: { size_bytes: 63e6 } } });
+  fs.writeFileSync(path.join(piper.voicesDir, 'voices.json'), JSON.stringify(Object.fromEntries([
+    voice('en_US-amy-medium', 'amy', 'medium', 'English', 'United States'), voice('fr_FR-gilles-low', 'gilles', 'low', 'French', 'France'),
+    voice('fr_FR-siwis-low', 'siwis', 'low', 'French', 'France'), voice('fr_FR-tom-medium', 'tom', 'medium', 'French', 'France'),
+  ].map(v => [v.key, v]))));
+  const env = { ...process.env, AFREC_HOME: home, SFDEMO_PIPER: process.env.SFDEMO_PIPER, SFDEMO_VOICES: process.env.SFDEMO_VOICES, SFDEMO_FAKE_PIPER_LOG: process.env.SFDEMO_FAKE_PIPER_LOG };
+  const init = (cwd, args, input, extra = {}) => spawnSync(process.execPath, [BIN, 'init', '--example', 'none', ...args], { cwd, input, encoding: 'utf8', env: { ...env, ...extra }, timeout: 60000 });
+  try {
+    const given = fresh('init-voice');
+    assert.equal(init(given, ['--voice', 'fr_FR-siwis-low']).status, 0);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(given, 'sfdemo.config.json'), 'utf8')).voice, 'fr_FR-siwis-low');
+    const plain = fresh('init-default');
+    const r = init(plain, []);
+    assert.match(r.stdout, /wrote sfdemo\.config\.json \(demos read by en_US-amy-medium\)/, 'no terminal: the default, without a question');
+    const asked = fresh('init-asked');
+    const a = init(asked, [], 'fr\n3\n', { SFDEMO_ASK: '1' });
+    assert.equal(a.status, 0, a.stderr);
+    assert.match(a.stdout, /Language \(en_US, fr_FR, or another of the 2; Enter: en_US\)/);
+    assert.match(a.stdout, / 1\. gilles \(low\), 63 MB\n {3}2\. siwis \(low\) ✓ installed\n {3}3\. tom \(medium\), 63 MB/);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(asked, 'sfdemo.config.json'), 'utf8')).voice, 'fr_FR-tom-medium');
+    const enter = fresh('init-enter');
+    init(enter, [], 'fr_FR\n\n', { SFDEMO_ASK: '1' });
+    assert.equal(JSON.parse(fs.readFileSync(path.join(enter, 'sfdemo.config.json'), 'utf8')).voice, 'fr_FR-tom-medium', 'Enter takes a voice that is not low quality');
   } finally { piper.restore(); }
 });

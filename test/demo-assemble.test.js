@@ -74,7 +74,8 @@ test('a whole demo: slides and a live window over the voice-over, one MP4 at 192
   const slides = path.join(dir, 'slides');
   fs.mkdirSync(slides, { recursive: true });
   for (const n of [1, 2]) ffmpeg(['-f', 'lavfi', '-i', `color=c=${n === 1 ? 'blue' : 'green'}:s=1600x900`, '-frames:v', '1', path.join(slides, `0${n}.png`)]);
-  const demo = parseDemo('---\ntitle: Assembly\nwindows:\n  Web: { url: https://example.com }\n---\n# Slides\n- slide: 1\n\nThe first slide.\n\n- slide: 2\n\nThe second one.\n\n# Live\n- window: Web\n\nOn the live page.\n', path.join(dir, 'assembly.md'));
+  const script = '---\ntitle: Assembly\nwindows:\n  Web: { url: https://example.com }\n---\n# Slides\n- slide: 1\n\nThe first slide.\n\n- slide: 2\n\nThe second one.\n\n# Live\n- window: Web\n\nOn the live page.\n';
+  const demo = parseDemo(script, path.join(dir, 'assembly.md'));
   await narrate(demo, { cacheDir: path.join(dir, 'narration') });
   const out = path.join(dir, 'out');
   // a take as the recorder writes it: a window video (a test pattern here) and the events of what was on screen
@@ -99,6 +100,13 @@ test('a whole demo: slides and a live window over the voice-over, one MP4 at 192
   assert.match(srt, /^1\n00:00:01,200 --> 00:00:\d\d,\d{3}\nThe first slide\.\n/);
   assert.match(srt, /On the live page\./);
   await assert.rejects(assembleDemo(parseDemo('---\ntitle: x\n---\n- slide: 9\nNine.', path.join(dir, 'x.md')), { out, slidesDir: slides }), /no image for slide\(s\) 9/);
+  // a new voice after recording: the live chapter still speaks with the old one, and the video says so
+  const renarrated = parseDemo(script.replace('title: Assembly', 'title: Assembly\nvoice: fr_FR-siwis-low'), path.join(dir, 'assembly.md'));
+  await narrate(renarrated, { cacheDir: path.join(dir, 'narration') });
+  const told = [];
+  const mixed = await assembleDemo(renarrated, { out, slidesDir: slides, emit: e => { if (e.type === 'warning') told.push(e.message); } });
+  assert.deepEqual(mixed.chapters.map(c => c.status), ['slides', 'take 1, with an earlier voice-over']);
+  assert.match(told[0], /chapter 2 \(Live\) was recorded with another voice-over .*\(--only 2 --retake\)/);
   // a take whose window video is gone: that chapter is left out, the others make the video
   fs.rmSync(video);
   const warnings = [];

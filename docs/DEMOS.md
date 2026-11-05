@@ -9,7 +9,7 @@ subtitles. A complete example: [examples/apex-callout-tour/](../examples/apex-ca
 type: demo
 title: Apex HTTP callouts, a guided tour
 org: myOrg
-voice: en_US-ryan-high
+voice: en_US-amy-medium
 windows:
   Admin: { path: /lightning/setup/SetupOneHome/home, label: "Admin · Setup" }
 ---
@@ -42,8 +42,8 @@ HTML comments (`<!-- -->`) and lines starting with `>` are notes for you: never 
 | --- | --- | --- |
 | `title` | the demo's name, and the first chapter's when the file starts without a heading | the file name |
 | `org` | the sf alias every window signs in to, unless a window names its own (`--org` replaces it) | |
-| `voice` | a Piper voice: `sfdemo voices --language en` lists them | `en_US-ryan-high` |
-| `pace` | `slow`, `presenter`, `normal`, `brisk`, or a number (1 = the voice's own speed) | `presenter` |
+| `voice` | a Piper voice: `sfdemo voices --language en` lists them | the project's (`voice` in sfdemo.config.json: `sfdemo init` asks), else `en_US-amy-medium` |
+| `pace` | `slow`, `presenter`, `normal`, `brisk`, or a number (1 = the voice's own speed) | the project's, else `presenter` |
 | `pause` | seconds of silence between two paragraphs | `0.7` |
 | `say` | how the voice reads a word: `{ SOQL: sockle }` (whole words, case-sensitive) | English acronyms |
 | `slides` | the folder of slide images: `01.png`, `02.png`... (also `Slide1.png`, `slide-01.png`) | `slides` |

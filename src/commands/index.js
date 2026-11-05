@@ -21,7 +21,8 @@ import { writeRunReport } from '../engine/report.js';
 import { listOrgs } from '../engine/salesforce.js';
 import { ffmpegBinary } from '../engine/media.js';
 import { loadDenylist } from '../denylist.js';
-import { DEMO_COMMANDS, setupVoice } from './demo.js';
+import { DEMO_COMMANDS, setupVoice, chooseVoice, ensureVoice } from './demo.js';
+import { DEFAULT_VOICE } from '../demo/script.js';
 import { isDemoText } from '../demo/script.js';
 
 const require = createRequire(import.meta.url);
@@ -57,7 +58,7 @@ Usage: sfdemo <command> [options]
   baseline set <run|latest> | clear | show
   compare <run|latest> [--with <run>] [--write]
   setup [--check]         install and check Chromium, ffmpeg, the sf CLI; --voice: Piper and a voice too
-  init [--org <alias>] [--example ebike|none] [--force]
+  init [--org <alias>] [--voice <voice>] [--example ebike|apex-callout-tour|none] [--force]   asks for the voice in a terminal
   orgs                    the orgs the sf CLI knows
 
   --config <file>         use this sfdemo.config.json (default: found upward from the current folder)
@@ -326,21 +327,30 @@ async function setup(argv) {
   if (sf.ok) {
     try { const orgs = await listOrgs(); out(`  ${orgs.length} org(s) known to the sf CLI (sfdemo orgs checks their connection)`); } catch { /* listing is a bonus */ }
   }
-  await setupVoice({ install: args.voice && !args.check, line: (good, name, detail) => (args.voice || good ? line(good, name, detail) : out(`· ${name}: ${detail} (only for narrated demos)`)) });
+  const voice = (() => { try { return loadProject({}).config.voice; } catch { return DEFAULT_VOICE; } })();
+  await setupVoice({ install: args.voice && !args.check, voice, line: (good, name, detail) => (args.voice || good ? line(good, name, detail) : out(`· ${name}: ${detail} (only for narrated demos)`)) });
   return ok ? 0 : 1;
 }
 
 async function init(argv) {
-  const args = parseArgs(argv, { org: 'string', example: 'string', force: 'boolean' });
+  const args = parseArgs(argv, { org: 'string', example: 'string', force: 'boolean', voice: 'string' });
   const dir = process.cwd();
   const file = path.join(dir, CONFIG_FILE);
   if (fs.existsSync(file) && !args.force) throw new Error(`${CONFIG_FILE} already exists (use --force to overwrite)`);
+  // the voice of the demos: --voice, else asked in a terminal, else the default (SFDEMO_ASK=1 asks on any input)
+  const interactive = (process.stdin.isTTY && process.stdout.isTTY) || process.env.SFDEMO_ASK === '1';
+  let voice = args.voice || DEFAULT_VOICE;
+  if (!args.voice && interactive) {
+    const { ask, close } = await lineAsker();
+    try { voice = await chooseVoice({ ask }); } finally { close(); }
+  }
   const config = {
     $schema: './node_modules/salesforce-demo-studio/schema/config.schema.json',
-    scenarios: 'scenarios', recordings: '.local/recordings', defaults: args.org ? { org: args.org } : {}, parallel: 3, baseline: null,
+    scenarios: 'scenarios', demos: 'demos', recordings: '.local/recordings', defaults: args.org ? { org: args.org } : {}, voice, parallel: 3, baseline: null,
   };
   fs.writeFileSync(file, JSON.stringify(config, null, 2) + '\n');
-  out(`wrote ${CONFIG_FILE}`);
+  out(`wrote ${CONFIG_FILE} (demos read by ${voice})`);
+  if (args.voice || interactive) await ensureVoice(voice);
   const scenarios = path.join(dir, 'scenarios');
   fs.mkdirSync(scenarios, { recursive: true });
   fs.mkdirSync(path.join(dir, 'demos', 'slides'), { recursive: true }); // demo scripts, and their slide images
@@ -366,6 +376,29 @@ async function init(argv) {
   }
   out('next: sfdemo setup --voice; a demo goes in demos/ (sfdemo narrate, then sfdemo demo), a conversation in scenarios/ (sfdemo run --dry-run)');
   return 0;
+}
+
+/**
+ * Questions on the terminal, answered line by line. Lines that arrive before their question wait for it (piped
+ * answers come all at once), and the end of the input answers Enter (the default) instead of leaving a question
+ * open, which would end the process without a word.
+ */
+async function lineAsker() {
+  const { createInterface } = await import('node:readline');
+  const rl = createInterface({ input: process.stdin, terminal: false });
+  const lines = [];
+  const waiting = [];
+  let closed = false;
+  rl.on('line', l => { if (waiting.length) waiting.shift()(l); else lines.push(l); });
+  rl.on('close', () => { closed = true; while (waiting.length) waiting.shift()(''); });
+  const echo = a => { if (!process.stdin.isTTY) process.stdout.write(a + '\n'); return a; }; // a terminal shows what is typed
+  const ask = q => {
+    process.stdout.write(q);
+    if (lines.length) return Promise.resolve(echo(lines.shift()));
+    if (closed) return Promise.resolve(echo(''));
+    return new Promise(resolve => waiting.push(a => resolve(echo(a))));
+  };
+  return { ask, close: () => rl.close() };
 }
 
 async function orgs() {

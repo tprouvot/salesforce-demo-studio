@@ -64,7 +64,7 @@ The voice speaks while the agent answers.
 
 test('settings: defaults, pace as a name or a number, unknown keys and bad values are errors that say how to fix them', () => {
   const d = demo('- slide: 1\n\nHi.', 'title: Tour');
-  assert.deepEqual([d.settings.voice, d.settings.lengthScale, d.settings.pause, d.settings.takes, d.settings.size], ['en_US-ryan-high', 1.25, 0.7, 3, '1920x1080']);
+  assert.deepEqual([d.settings.voice, d.settings.lengthScale, d.settings.pause, d.settings.takes, d.settings.size], ['en_US-amy-medium', 1.25, 0.7, 3, '1920x1080']);
   assert.equal(d.chapters[0].title, 'Tour', 'the first chapter is named after the demo until a heading');
   assert.equal(lengthScale('normal'), 1);
   assert.equal(lengthScale('brisk'), 0.87);
@@ -114,7 +114,7 @@ test('speaker notes: what is said on each slide, then the live part as cues, up 
 
 test('a demo is told from a conversation by its front matter; the sample tour reads', () => {
   assert.equal(isDemoText('---\ntype: demo\n---\nHi'), true);
-  assert.equal(isDemoText('---\nvoice: en_US-ryan-high\n---\n1. Hi'), true);
+  assert.equal(isDemoText('---\nvoice: en_US-amy-medium\n---\n1. Hi'), true);
   assert.equal(isDemoText('---\nsite: https://x.example.com/\n---\n1. Hi'), false);
   assert.equal(isDemoText('1. Hi'), false);
   const file = fileURLToPath(new URL('../examples/apex-callout-tour/apex-callout-tour.md', import.meta.url));
@@ -122,4 +122,13 @@ test('a demo is told from a conversation by its front matter; the sample tour re
   const tour = readDemo(file, { org: 'SDO_simple' });
   assert.deepEqual(tour.chapters.map(c => c.title), ['Opening', 'The External Credential holds the secret', 'The Named Credential points to the API', 'One setting per callout', 'Call it from Apex', 'Close']);
   assert.deepEqual(speakerNotes(tour).map(n => n.slide), [1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('the project\'s voice and pace apply to a script that sets none; a script\'s own win', () => {
+  const defaults = { voice: 'fr_FR-siwis-low', pace: 'normal' };
+  const plain = parseDemo('---\ntitle: x\n---\nHi.', '/d/x.md', { defaults });
+  assert.deepEqual([plain.settings.voice, plain.settings.lengthScale], ['fr_FR-siwis-low', 1]);
+  const own = parseDemo('---\nvoice: en_US-amy-medium\npace: slow\n---\nHi.', '/d/x.md', { defaults });
+  assert.deepEqual([own.settings.voice, own.settings.lengthScale], ['en_US-amy-medium', 1.333]);
+  assert.throws(() => parseDemo('---\ntitle: x\n---\nHi.', '/d/x.md', { defaults: { pace: 'sleepy' } }), /pace: "sleepy" is not a pace/);
 });

@@ -15,7 +15,7 @@ fs.writeFileSync(path.join(dir, 'sfdemo.config.json'), JSON.stringify({ scenario
 fs.writeFileSync(path.join(dir, 'scenarios', 'guest.md'), '---\nsite: https://x.example.com/\n---\n1. Hi\n');
 fs.writeFileSync(path.join(dir, 'creds.txt'), 'rider@x.example s3cret  (rider)\n');
 fs.mkdirSync(path.join(dir, 'demos'));
-fs.writeFileSync(path.join(dir, 'demos', 'tour.md'), '---\ntype: demo\ntitle: The tour\nvoice: en_US-ryan-high  # the narrator\nwindows:\n  Web: { url: https://example.com }\n---\n# Welcome\n- slide: 1\n\nHello and welcome.\n\n# Live\n- window: Web\n- click: More information\n\nOn the page.\n');
+fs.writeFileSync(path.join(dir, 'demos', 'tour.md'), '---\ntype: demo\ntitle: The tour\nvoice: en_US-amy-medium  # the narrator\nwindows:\n  Web: { url: https://example.com }\n---\n# Welcome\n- slide: 1\n\nHello and welcome.\n\n# Live\n- window: Web\n- click: More information\n\nOn the page.\n');
 fs.writeFileSync(path.join(dir, 'demos', 'broken.md'), '---\ntype: demo\npace: sleepy\n---\nHi.\n');
 const recordings = path.join(dir, '.local', 'recordings');
 makeRun(recordings, '20261020-100000', [result('Guest', ['Rides cost $4 an hour.'])]);
@@ -191,7 +191,7 @@ test('demos: the list, one demo with its chapters, notes and missing slides, and
   assert.deepEqual(one.chapters.map(c => [c.n, c.title, c.live, c.windows, c.lines, c.take]), [[1, 'Welcome', false, [], ['Hello and welcome.'], null], [2, 'Live', true, ['Web'], ['On the page.'], null]]);
   assert.deepEqual(one.notes, [{ slide: 1, notes: 'Hello and welcome.\n\n▶ Switch to Web\n\n▶ Click “More information”\n\nOn the page.' }]);
   assert.deepEqual(one.missing, [1]);
-  assert.equal(one.settings.voice, 'en_US-ryan-high');
+  assert.equal(one.settings.voice, 'en_US-amy-medium');
   assert.equal((await get('/api/demo?file=../sfdemo.config.json')).status, 400);
   const bad = await send('PUT', '/api/demo', { file: 'tour.md', text: '---\ntype: demo\nvoise: x\n---\nHi.\n' });
   assert.equal(bad.status, 400);
@@ -203,7 +203,7 @@ test('demos: the list, one demo with its chapters, notes and missing slides, and
 });
 
 test('demos: the voice and pace are set in the front matter (its comments kept), a sentence is heard, the plan is read', async () => {
-  const piper = installFakePiper(['en_US-ryan-high', 'fr_FR-siwis-low']);
+  const piper = installFakePiper(['en_US-amy-medium', 'fr_FR-siwis-low']);
   try {
     const changed = await (await send('POST', '/api/demo/settings', { file: 'tour.md', voice: 'fr_FR-siwis-low', pace: 'normal' })).json();
     assert.deepEqual([changed.settings.voice, changed.settings.pace], ['fr_FR-siwis-low', 'normal']);
@@ -227,4 +227,18 @@ test('demos: the voice and pace are set in the front matter (its comments kept),
     assert.equal(record.status, 400);
     assert.match((await record.json()).error, /no image for slide\(s\) 1 in .*demos.slides: export the deck's slides there first/);
   } finally { piper.restore(); }
+});
+
+test('demos: the voice of every demo that names none is the project\'s, set from the UI', async () => {
+  fs.writeFileSync(path.join(dir, 'demos', 'plain.md'), '---\ntype: demo\n---\n# One\nHi.\n');
+  fs.writeFileSync(path.join(dir, 'demos', 'named.md'), '---\ntype: demo\nvoice: en_US-john-medium\n---\n# One\nHi.\n');
+  assert.equal((await (await get('/api/demo?file=plain.md')).json()).settings.voice, 'en_US-amy-medium', 'the default voice');
+  assert.deepEqual(await (await send('POST', '/api/demo/default-voice', { voice: 'fr_FR-siwis-low', pace: 'normal' })).json(), { voice: 'fr_FR-siwis-low', pace: 'normal' });
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'sfdemo.config.json'), 'utf8')).voice, 'fr_FR-siwis-low');
+  const plain = await (await get('/api/demo?file=plain.md')).json();
+  assert.deepEqual([plain.settings.voice, plain.settings.pace], ['fr_FR-siwis-low', 'normal']);
+  assert.equal((await (await get('/api/demo?file=named.md')).json()).settings.voice, 'en_US-john-medium', 'a script naming its voice keeps it');
+  assert.equal((await send('POST', '/api/demo/default-voice', { voice: 'x' })).status, 400);
+  assert.ok((await send('POST', '/api/demo/default-voice', { voice: 'en_US-amy-medium', pace: 'sleepy' })).status >= 400);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dir, 'sfdemo.config.json'), 'utf8')).voice, 'fr_FR-siwis-low', 'a refused change writes nothing');
 });

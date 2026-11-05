@@ -408,7 +408,7 @@
     const name = prompt('Name of the demo, e.g. product-tour');
     if (!name) return;
     const file = /\.md$/i.test(name) ? name : `${name.trim().replace(/[^\w-]+/g, '-')}.md`;
-    const text = `---\ntype: demo\ntitle: ${name.replace(/\.md$/i, '')}\nvoice: en_US-ryan-high\npace: presenter\n---\n\n# Opening\n\nHello, and welcome. Write here what the voice says: one paragraph is one breath.\n`;
+    const text = `---\ntype: demo\ntitle: ${name.replace(/\.md$/i, '')}\n---\n\n# Opening\n\nHello, and welcome. Write here what the voice says: one paragraph is one breath.\n`; // the project's voice
     await api('PUT', '/api/demo', { file, text });
     location.hash = `#/demos/${encodeURIComponent(file)}`;
   }
@@ -476,6 +476,7 @@
       h('div', { class: 'row gap' },
         h('button', { class: 'btn', onclick: guard(async () => { toast('Getting the voice ready (the first time, it downloads)'); const r = await api('POST', '/api/voice/try', { voice: voice.value, pace: pace.value, text: sample.value }); audio.src = r.url; await audio.play().catch(() => {}); }) }, 'Listen'),
         h('button', { class: 'btn primary', disabled: !voice.value, onclick: guard(async () => { await api('POST', '/api/demo/settings', { file, voice: voice.value, pace: pace.value }); toast(`The demo now uses ${voice.value}`); reload(); }) }, 'Use this voice'),
+        h('button', { class: 'btn', disabled: !voice.value, title: 'every demo that names no voice of its own, new ones included', onclick: guard(async () => { await api('POST', '/api/demo/default-voice', { voice: voice.value, pace: pace.value }); toast(`New demos use ${voice.value}`); }) }, 'Use for all new demos'),
         audio));
   }
 

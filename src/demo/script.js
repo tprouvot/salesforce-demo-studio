@@ -3,7 +3,7 @@
  *
  *   ---
  *   title: Apex callouts, a guided tour
- *   voice: en_US-ryan-high          # a Piper voice (sfdemo voices lists them)
+ *   voice: en_US-amy-medium         # a Piper voice (sfdemo voices lists them); default: the project's
  *   pace: presenter                 # slow, presenter, normal, brisk, or a number (1 = the voice's own speed)
  *   slides: slides                  # folder of slide images: 01.png, 02.png... (the deck skill exports them)
  *   deck: https://docs.google.com/presentation/d/...
@@ -37,7 +37,7 @@ export const DEMO_STEPS = ['slide', 'window', 'open', 'setup', 'record', 'fill',
 const CONVERSATION_WORDS = ['click', 'wait', 'type-from', 'expect-not', 'expect-button', 'max-seconds', 'expect'];
 const SETTINGS = ['type', 'title', 'org', 'deck', 'slides', 'voice', 'language', 'pace', 'pause', 'windows', 'say', 'takes', 'reply timeout', 'size', 'filler', 'retry'];
 const PACES = { slow: 0.75, presenter: 0.8, normal: 1, brisk: 1.15 };
-export const DEFAULT_VOICE = 'en_US-ryan-high';
+export const DEFAULT_VOICE = 'en_US-amy-medium';
 const squash = s => String(s).toLowerCase().replace(/[\s_-]/g, '');
 const WORD = new RegExp(`^(${[...DEMO_STEPS, ...CONVERSATION_WORDS].map(w => w.replace(/[- ]/g, '[-_ ]?')).join('|')})\\s*:\\s*([\\s\\S]*)$`, 'i');
 const demoWord = w => DEMO_STEPS.find(d => squash(d) === squash(w));
@@ -101,7 +101,7 @@ function liveStep(text, where) {
 }
 
 /** The front matter, checked: unknown keys are errors (typos), windows are checked like conversation settings. */
-function readSettings(raw, file) {
+function readSettings(raw, file, defaults = {}) {
   const out = { windows: {}, say: {} };
   for (const [k, v] of Object.entries(raw || {})) {
     const key = SETTINGS.find(s => squash(s) === squash(k));
@@ -109,7 +109,8 @@ function readSettings(raw, file) {
     out[key === 'reply timeout' ? 'replyTimeout' : key] = v;
   }
   if (out.voice !== undefined && typeof out.voice !== 'string') throw new Error(`${file}: voice: is the name of a Piper voice, e.g. ${DEFAULT_VOICE}`);
-  out.voice = out.voice || DEFAULT_VOICE;
+  out.voice = out.voice || defaults.voice || DEFAULT_VOICE;
+  if (out.pace === undefined && defaults.pace !== undefined) out.pace = defaults.pace;
   out.lengthScale = lengthScale(out.pace);
   out.pause = out.pause === undefined ? 0.7 : Number(out.pause);
   if (!(out.pause >= 0 && out.pause <= 5)) throw new Error(`${file}: pause: is the silence between two spoken paragraphs, in seconds (0 to 5)`);
@@ -147,9 +148,10 @@ export function resolveWindow(name, raw, settings, file) {
  * `type` and a `where` (file:line).
  * @param {string} text
  * @param {string} file
- * @param {{ org?: string }} [overrides] settings given on the command line (the org alias to record in)
+ * @param {{ org?: string, defaults?: { voice?: string, pace?: string | number } }} [options] org: the alias to record in
+ *   (it replaces the script's); defaults: the project's voice and pace, for a script that sets none
  */
-export function parseDemo(text, file, overrides = {}) {
+export function parseDemo(text, file, options = {}) {
   let body = String(text).replace(/^﻿/, '');
   let rawSettings = {};
   const fm = body.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
@@ -157,8 +159,8 @@ export function parseDemo(text, file, overrides = {}) {
     try { rawSettings = YAML.parse(fm[1]) || {}; } catch (e) { throw new Error(`${file}: invalid front matter: ${e.message}`); }
     body = body.slice(fm[0].length);
   }
-  const settings = readSettings(rawSettings, file);
-  if (overrides.org) settings.org = overrides.org;
+  const settings = readSettings(rawSettings, file, options.defaults);
+  if (options.org) settings.org = options.org;
   const offset = fm ? fm[0].split(/\r?\n/).length - 1 : 0;
   const chapters = [];
   let chapter = null;
@@ -233,9 +235,12 @@ export function parseDemo(text, file, overrides = {}) {
 }
 
 /** Reads a demo script file. */
-export function readDemo(file, overrides = {}) {
-  return parseDemo(fs.readFileSync(file, 'utf8'), path.resolve(file), overrides);
+export function readDemo(file, options = {}) {
+  return parseDemo(fs.readFileSync(file, 'utf8'), path.resolve(file), options);
 }
+
+/** The voice and pace a project gives the demos that set none. */
+export const demoDefaults = project => ({ voice: project.config.voice, pace: project.config.pace });
 
 /** A live step as a presenter's cue, for the speaker notes ("▶ Setup › Named Credentials"); null for checks. */
 export function cue(step) {

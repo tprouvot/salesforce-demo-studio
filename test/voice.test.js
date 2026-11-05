@@ -16,7 +16,7 @@ before(() => { piper = installFakePiper(); process.env.SFDEMO_HOME = path.join(t
 after(() => { piper.restore(); delete process.env.SFDEMO_HOME; });
 
 test('what the voice reads: whole words only, the longest first, case kept, markdown marks dropped', () => {
-  const english = sayingsFor('en_US-ryan-high', { 'Named Credential': 'named credential', CRM: 'see are em' });
+  const english = sayingsFor('en_US-amy-medium', { 'Named Credential': 'named credential', CRM: 'see are em' });
   assert.equal(spokenForm('The **API** calls SOQL; the APIs, then a RAPID check and `apex`.', english), 'The A P I calls sockle; the A P Is, then a RAPID check and apex.');
   assert.equal(spokenForm('A CRM and a Named Credential.', english), 'A see are em and a named credential.', 'the demo\'s own sayings win');
   assert.equal(spokenForm('Agentforce, Omni-Channel and Data 360.', english), 'Agent force, Omni Channel and Data three sixty.');
@@ -40,18 +40,18 @@ test('a WAV\'s duration from its header; a file that is not a WAV says so', () =
 
 test('synthesis: Piper gets the spoken form and the pace, the result is cached by text, voice and pace', async () => {
   const cacheDir = path.join(tmp, 'cache');
-  const a = await synthesize({ text: 'The API answers.', voice: 'en_US-ryan-high', lengthScale: 1.25, cacheDir });
+  const a = await synthesize({ text: 'The API answers.', voice: 'en_US-amy-medium', lengthScale: 1.25, cacheDir });
   assert.equal(a.spoken, 'The A P I answers.');
   assert.ok(Math.abs(a.duration - 'The A P I answers.'.length * 0.05 * 1.25) < 0.01, String(a.duration));
   const call = piper.calls().at(-1);
   assert.equal(call.text, 'The A P I answers.');
   assert.equal(call.args[call.args.indexOf('--length-scale') + 1], '1.25');
-  assert.equal(call.args[call.args.indexOf('-m') + 1], path.join(piper.voicesDir, 'en_US-ryan-high.onnx'));
+  assert.equal(call.args[call.args.indexOf('-m') + 1], path.join(piper.voicesDir, 'en_US-amy-medium.onnx'));
   const calls = piper.calls().length;
-  assert.equal((await synthesize({ text: 'The API answers.', voice: 'en_US-ryan-high', lengthScale: 1.25, cacheDir })).wav, a.wav);
+  assert.equal((await synthesize({ text: 'The API answers.', voice: 'en_US-amy-medium', lengthScale: 1.25, cacheDir })).wav, a.wav);
   assert.equal(piper.calls().length, calls, 'the cache answered');
-  assert.notEqual((await synthesize({ text: 'The API answers.', voice: 'en_US-ryan-high', lengthScale: 1, cacheDir })).wav, a.wav, 'another pace is another file');
-  await assert.rejects(synthesize({ text: 'Please FAIL.', voice: 'en_US-ryan-high', cacheDir }), /Piper failed \(exit 3\): fake piper: asked to fail/);
+  assert.notEqual((await synthesize({ text: 'The API answers.', voice: 'en_US-amy-medium', lengthScale: 1, cacheDir })).wav, a.wav, 'another pace is another file');
+  await assert.rejects(synthesize({ text: 'Please FAIL.', voice: 'en_US-amy-medium', cacheDir }), /Piper failed \(exit 3\): fake piper: asked to fail/);
   assert.ok(!fs.readdirSync(cacheDir).some(f => f.includes('part')), 'a failed line leaves no half file');
 });
 
@@ -68,10 +68,10 @@ test('narrating a demo: every spoken paragraph gets its WAV and duration, and th
 
 test('Piper and voices are found where they are installed, SFDEMO_VOICES first', () => {
   assert.equal(findPiper(), piper.bin);
-  assert.ok(findVoice('en_US-ryan-high'));
+  assert.ok(findVoice('en_US-amy-medium'));
   assert.equal(findVoice('xx_XX-nobody-low'), null);
   const mine = installedVoices().filter(v => v.model.startsWith(piper.voicesDir)); // the machine may hold real voices too
-  assert.deepEqual(mine.map(v => [v.key, v.language]), [['en_US-ryan-high', 'en_US'], ['fr_FR-siwis-low', 'fr_FR']]);
+  assert.deepEqual(mine.map(v => [v.key, v.language]), [['en_US-amy-medium', 'en_US'], ['fr_FR-siwis-low', 'fr_FR']]);
 });
 
 test('the catalogue and a download: languages listed, MD5 checked, a damaged file refused, nothing half-written', async () => {
@@ -122,6 +122,6 @@ test('without Piper, synthesis says how to install it', async () => {
   process.env.HOME = path.join(tmp, 'empty-home');
   try {
     if (findPiper()) return; // a Piper outside PATH and HOME (an unusual install): nothing to check here
-    await assert.rejects(synthesize({ text: 'Not cached yet.', voice: 'en_US-ryan-high', cacheDir: path.join(tmp, 'nopiper') }), /Piper, the voice engine, is not installed: run sfdemo setup --voice/);
+    await assert.rejects(synthesize({ text: 'Not cached yet.', voice: 'en_US-amy-medium', cacheDir: path.join(tmp, 'nopiper') }), /Piper, the voice engine, is not installed: run sfdemo setup --voice/);
   } finally { for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
 });

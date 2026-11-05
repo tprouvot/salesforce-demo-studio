@@ -2,7 +2,7 @@
 type: demo
 title: Apex HTTP callouts, a guided tour
 org: myOrg                # your sf alias; or record with: sfdemo demo apex-callout-tour.md --org <alias>
-voice: en_US-ryan-high
+voice: en_US-amy-medium
 pace: presenter
 slides: slides            # 01.png ... 07.png, exported from the deck (the demo-deck skill does it)
 windows:

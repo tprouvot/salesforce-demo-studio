@@ -27,7 +27,7 @@ process.stdin.on('end', () => {
 `;
 
 /** Installs the fake for this process; `voices` are the keys of the fake installed voices. */
-export function installFakePiper(voices = ['en_US-ryan-high', 'fr_FR-siwis-low']) {
+export function installFakePiper(voices = ['en_US-amy-medium', 'fr_FR-siwis-low']) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-piper-'));
   const voicesDir = path.join(dir, 'voices');
   fs.mkdirSync(voicesDir);
