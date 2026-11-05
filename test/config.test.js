@@ -120,3 +120,17 @@ test('the former name still works: afrec.config.json, .afrec/, AFREC_HOME; the n
     assert.equal(homeDir(), path.join(tmp, 'new-home'));
   } finally { for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v; } }
 });
+
+test('the denylist is read from .sfdemo and from the former .afrec alike, when both folders exist', () => {
+  const root = dir('deny-both');
+  fs.mkdirSync(path.join(root, '.afrec'));
+  fs.mkdirSync(path.join(root, '.sfdemo'));
+  fs.writeFileSync(path.join(root, '.afrec', 'denylist.txt'), 'Harbor Lights\n');
+  fs.writeFileSync(path.join(root, '.sfdemo', 'denylist.txt'), 'Pier 9\n');
+  const saved = process.env.SFDEMO_HOME;
+  process.env.SFDEMO_HOME = dir('deny-both', 'home', '.sfdemo');
+  try {
+    assert.deepEqual(loadDenylist(path.join(root, '.sfdemo')).sort(), ['Harbor Lights', 'Pier 9']);
+    assert.deepEqual(loadDenylist(path.join(root, '.afrec')).sort(), ['Harbor Lights', 'Pier 9']);
+  } finally { if (saved === undefined) delete process.env.SFDEMO_HOME; else process.env.SFDEMO_HOME = saved; }
+});

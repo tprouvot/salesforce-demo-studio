@@ -9,7 +9,11 @@ import path from 'node:path';
 import { homeDir } from './config.js';
 
 export function loadDenylist(stateDir) {
-  const files = [stateDir ? path.join(stateDir, 'denylist.txt') : null, path.join(homeDir(), 'denylist.txt')].filter(Boolean);
+  // both state folders (.sfdemo, and .afrec from the tool's former name) and both home folders: a list must never
+  // go unread because the folder holding it was renamed, or because a new one appeared beside it
+  const sibling = dir => path.join(path.dirname(dir), path.basename(dir) === '.sfdemo' ? '.afrec' : path.basename(dir) === '.afrec' ? '.sfdemo' : path.basename(dir));
+  const home = homeDir();
+  const files = [...new Set([stateDir, stateDir && sibling(stateDir), home, sibling(home)].filter(Boolean).map(d => path.join(d, 'denylist.txt')))];
   const terms = new Set();
   for (const file of files) {
     if (!fs.existsSync(file)) continue;
