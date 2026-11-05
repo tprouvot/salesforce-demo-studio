@@ -11,6 +11,8 @@ report with checks), on the Lightning Agentforce panel and on Embedded Messaging
 The voice runs on your machine ([Piper](https://github.com/OHF-Voice/piper1-gpl), 58 languages): nothing is sent
 anywhere, and nothing costs anything. No AI is needed to record; Claude only helps you write, if you want it to.
 
+See it first: [a five-minute tour of sfdemo](docs/tour/README.md), recorded by sfdemo itself.
+
 ## Install
 
 > **Not on npm yet.** Install it from GitHub as below.

@@ -157,6 +157,8 @@ Here is the class. We add one line to it.
 - wait for: Deploy Succeeded
 ````
 
+A whole demo made of them: [the tour of sfdemo](tour/sfdemo-tour.md).
+
 **A terminal window** is drawn by sfdemo and filmed like the other windows. Each command is typed at the prompt one
 key at a time, then runs in a real terminal (colours, spinners and progress bars show as they do for you; on
 Windows, without them). `cd <folder>` and `clear` work as in a shell; each other command runs on its own, so a
