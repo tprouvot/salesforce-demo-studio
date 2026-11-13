@@ -36,7 +36,7 @@ export function parseArgs(argv, spec) {
 /** Command-line flags that set conversation settings (the file wins over them). */
 export const SETTING_FLAGS = {
   org: 'org', surface: 'surface', app: 'app', path: 'path', site: 'site', user: 'user', agent: 'agent', credentials: 'credentials',
-  network: 'network', 'login-url': 'loginUrl', 'auth-url': 'authUrl', viewport: 'viewport', record: 'record',
+  network: 'network', 'login-url': 'loginUrl', 'auth-url': 'authUrl', viewport: 'viewport', area: 'area', record: 'record',
   'reply-timeout': 'replyTimeout', settle: 'settle', 'type-delay': 'typeDelay', warmup: 'warmup', 'input-timeout': 'inputTimeout',
 };
 

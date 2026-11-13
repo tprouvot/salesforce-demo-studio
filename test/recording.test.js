@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { usePlayerEnv } from './helpers/player-env.js';
 import { InputBroker } from '../src/engine/input.js';
+import { gifSize, pngSize, videoSize } from './helpers/sizes.js';
 import { probeDuration } from '../src/engine/media.js';
 
 const env = usePlayerEnv();
@@ -32,6 +33,22 @@ test('a Messaging guest recorded to MP4 and GIF: the timeline is cut, the raw vi
   assert.ok(mp4 < webm, `the MP4 (${mp4} s) is shorter than the raw recording (${webm} s)`);
   assert.equal(fs.readFileSync(path.join(dir, 'conversation.gif')).subarray(0, 6).toString(), 'GIF89a');
   assert.match(read('transcript.md'), /- Surface: Embedded Messaging on http:\/\/127\.0\.0\.1:\d+\/s\//);
+});
+
+test('area: chat crops the MP4 and every screenshot to the chat; area: page keeps the whole page in all of them', { skip }, async () => {
+  // the fake site's chat frame is 400x600 at the bottom right of a 1280x800 page, filmed at 2x
+  const chat = await env.play('---\nsite: {site}/s/\nsettle: 1\nviewport: 1280x800\narea: chat\n---\n1. Hi\n');
+  assert.equal(chat.result.error, null);
+  assert.deepEqual(chat.result.warnings, []);
+  assert.deepEqual(videoSize(path.join(chat.dir, 'conversation.mp4')), { width: 400, height: 600 });
+  assert.deepEqual(gifSize(path.join(chat.dir, 'conversation.gif')), { width: 400, height: 600 }, 'the GIF of the cropped MP4 is not cropped again');
+  for (const shot of ['00-open.png', chat.result.exchanges[0].screenshot, '99-end.png']) assert.deepEqual(pngSize(path.join(chat.dir, shot)), { width: 800, height: 1200 }, shot);
+
+  const page = await env.play('---\nsite: {site}/s/\nsettle: 1\nviewport: 1280x800\narea: page\n---\n1. Hi\n');
+  assert.equal(page.result.error, null);
+  assert.deepEqual(videoSize(path.join(page.dir, 'conversation.mp4')), { width: 1280, height: 800 });
+  assert.deepEqual(gifSize(path.join(page.dir, 'conversation.gif')), { width: 960, height: 600 }, 'a GIF of the whole page is wider than one of the chat');
+  for (const shot of ['00-open.png', page.result.exchanges[0].screenshot, '99-end.png']) assert.deepEqual(pngSize(path.join(page.dir, shot)), { width: 2560, height: 1600 }, shot);
 });
 
 test('a one-time code from the prompt is typed into the chat but never shown, logged or written', { skip }, async () => {

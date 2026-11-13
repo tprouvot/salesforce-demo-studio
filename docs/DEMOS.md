@@ -215,5 +215,8 @@ sfdemo demo demos/<name>.md --video-only       # the video again (new slide imag
 ```
 
 Live chapters are recorded in real time (1440x810 pages, scaled to the video's size); chapters of slides and
-narration need no browser. Takes are kept in `<recordings>/<name>/takes/`: a chapter uses its last complete take,
+narration need no browser. The video shows the window in front whole (the browser page, the terminal sfdemo draws,
+the editor's window), never your desktop, and a demo does not crop a window to its chat: for a video of the
+Agentforce conversation alone, record it as a conversation, `sfdemo run --area chat`
+([README](../README.md#only-the-chat-or-the-whole-page)). Takes are kept in `<recordings>/<name>/takes/`: a chapter uses its last complete take,
 so trying again never loses a good one. `assembly.json` says which take each chapter used.

@@ -44,7 +44,7 @@ export function describePlan(conversations, parallel) {
     const steps = c.steps.map(s => s.type).reduce((acc, t) => ({ ...acc, [t]: (acc[t] || 0) + 1 }), {});
     lines.push(`  ${c.name.padEnd(width)}  ${c.surface.padEnd(9)} ${who}  @ ${where}`);
     lines.push(`  ${''.padEnd(width)}  ${Object.entries(steps).map(([t, k]) => `${k} ${t}`).join(', ')}; ${record}; ${c.viewport.name}`
-      + `${c.needsWarmup ? `; warm-up "${c.warmup}"` : ''}${c.fresh ? '' : '; keeps an open chat'}${c.hideLoginAsBanner ? '; hides the Login-As banner' : ''}`);
+      + `${c.area === 'chat' ? ', the chat only' : c.area === 'page' ? ', the whole page' : ''}${c.needsWarmup ? `; warm-up "${c.warmup}"` : ''}${c.fresh ? '' : '; keeps an open chat'}${c.hideLoginAsBanner ? '; hides the Login-As banner' : ''}`);
   }
   const groups = {};
   conversations.forEach(c => { (groups[c.identity] = groups[c.identity] || []).push(c.name); });

@@ -88,6 +88,14 @@ test('inference: warm-up, password, alias user, agent only on Lightning, boolean
   assert.equal(resolved.hideLoginAsBanner, true);
 });
 
+test('area: chat or page, none by default, anything else an error', () => {
+  const area = text => resolveConversation(readScenarioFiles([write('Area.md', `---\nsite: https://x.example.com/\n${text}---\n1. Hi\n`)])[0]).area;
+  assert.equal(area(''), null);
+  assert.equal(area('area: chat\n'), 'chat');
+  assert.equal(area('area: page\n'), 'page');
+  assert.throws(() => area('area: screen\n'), /area/);
+});
+
 test('an expect before any message is an error', () => {
   assert.throws(() => resolveConversation(readScenarioFiles([write('Early.md', '---\nsite: https://x.example.com/\n---\n- expect: x\n1. Hi\n')])[0]), /comes before any message/);
 });

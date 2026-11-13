@@ -81,19 +81,19 @@ test('the run report: counts, a row per conversation with its files, healed, fla
 
 test('the plan: who signs in where, what is recorded, and which conversations queue behind each other', () => {
   const file = path.join(fs.mkdtempSync(path.join(tmp, 'plan-')), 'plan.csv');
-  fs.writeFileSync(file, 'conversation,surface,org,site,user,app,record,warmup,fresh,message\n'
-    + 'Fleet,lightning,myOrg,,,Service,screenshots,,,Hi\n'
-    + 'Fleet again,lightning,myOrg,,,,video gif,,no,Hello\n'
-    + 'Rider,messaging,myOrg,https://riders.example.com/s/,rider,,none,Hello there,,Extend my rental\n'
-    + 'Guest,messaging,,https://riders.example.com/s/,,,,,,Hi\n');
+  fs.writeFileSync(file, 'conversation,surface,org,site,user,app,record,area,warmup,fresh,message\n'
+    + 'Fleet,lightning,myOrg,,,Service,screenshots,chat,,,Hi\n'
+    + 'Fleet again,lightning,myOrg,,,,video gif,page,,no,Hello\n'
+    + 'Rider,messaging,myOrg,https://riders.example.com/s/,rider,,none,,Hello there,,Extend my rental\n'
+    + 'Guest,messaging,,https://riders.example.com/s/,,,,,,,Hi\n');
   const { conversations, errors } = resolveAll(readScenarioFiles([file]));
   assert.deepEqual(errors, []);
   assignFolders(conversations);
   const lines = describePlan(conversations, 2);
   assert.equal(lines[0], '4 conversation(s), up to 2 at a time:');
   assert.match(lines[1], /^ {2}Fleet +lightning CLI user of myOrg {2}@ myOrg app Service$/);
-  assert.match(lines[2], /1 message; screenshots; desktop$/);
-  assert.match(lines[4], /1 message; video\+gif; desktop; keeps an open chat$/);
+  assert.match(lines[2], /1 message; screenshots; desktop, the chat only$/);
+  assert.match(lines[4], /1 message; video\+gif; desktop, the whole page; keeps an open chat$/);
   assert.match(lines[5], /Rider +messaging rider \(login-as\) {2}@ https:\/\/riders\.example\.com\/s\/$/);
   assert.match(lines[6], /1 message; transcript only; desktop; warm-up "Hello there"$/);
   assert.match(lines[7], /Guest +messaging guest {2}@ https:\/\/riders\.example\.com\/s\/$/);

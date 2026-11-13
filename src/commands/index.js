@@ -43,7 +43,7 @@ Usage: sfdemo <command> [options]
   run [files|folders]     record conversations (default: the project's scenarios folder)
         --dry-run  --parallel <n>  --out <dir>  --only <name,...>  --headed
         settings for conversations that leave them out: --org --user --site --app --path --agent --surface
-        --viewport --record --reply-timeout --settle --type-delay --warmup --input-timeout --network
+        --viewport --area chat|page --record --reply-timeout --settle --type-delay --warmup --input-timeout --network
         --hide-login-as-banner --no-fresh; development only: --credentials --login-url --auth-url
   new [name|file.md]      start a scenario: its settings checked in the org, and what the agent can do (its topics
                           and actions) listed in it; you write the messages (default: scenarios/<agent>.md)

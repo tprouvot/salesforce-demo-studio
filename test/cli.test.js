@@ -41,8 +41,8 @@ test('arguments: positionals, --key value, --key=value, booleans, numbers, lists
 });
 
 test('setting flags become conversation settings, in their schema names', () => {
-  const args = parseArgs(['--org', 'myOrg', '--reply-timeout', '90', '--login-url', 'https://x.example.com', '--hide-login-as-banner', '--no-fresh'], settingSpec());
-  assert.deepEqual(settingsFromFlags(args), { org: 'myOrg', replyTimeout: '90', loginUrl: 'https://x.example.com', hideLoginAsBanner: true, fresh: false });
+  const args = parseArgs(['--org', 'myOrg', '--reply-timeout', '90', '--login-url', 'https://x.example.com', '--area', 'chat', '--hide-login-as-banner', '--no-fresh'], settingSpec());
+  assert.deepEqual(settingsFromFlags(args), { org: 'myOrg', replyTimeout: '90', loginUrl: 'https://x.example.com', area: 'chat', hideLoginAsBanner: true, fresh: false });
   assert.deepEqual(settingsFromFlags(parseArgs([], settingSpec())), {});
 });
 

@@ -1,6 +1,6 @@
 ---
 name: agentforce-conversation-recorder
-description: Records scripted Agentforce conversations with the sfdemo CLI (no AI at record time) - screenshots per answer, an MP4 and a GIF with thinking pauses cut, a transcript and an HTML report with checks - on the Lightning Agentforce panel and Embedded Messaging widgets, and keeps the tool working across Salesforce releases (doctor, repair bundles, selector packs). Use when the user wants screenshots, a video, a GIF or a demo recording of an Agentforce conversation, wants to replay a .md or .csv conversation script, or when sfdemo reports broken or healed locators.
+description: Records scripted Agentforce conversations with the sfdemo CLI (no AI at record time) - screenshots per answer, an MP4 and a GIF with thinking pauses cut, a transcript and an HTML report with checks - on the Lightning Agentforce panel and Embedded Messaging widgets, and keeps the tool working across Salesforce releases (doctor, repair bundles, selector packs). Use when the user wants screenshots, a video, a GIF or a demo recording of an Agentforce conversation (only the chat, or the whole page around it), wants to replay a .md or .csv conversation script, or when sfdemo reports broken or healed locators.
 ---
 
 # Agentforce conversation recorder
@@ -31,10 +31,18 @@ package name.
    the widget) and who is signed in (the sf alias's user, Login-As of a user, a guest). Add checks instead of
    planning to read every answer: `expect:`, `expect-not:`, `expect-button:`, `max-seconds:`. For one-time codes
    use `type-from: prompt one-time code`: the user types it in `sfdemo ui` or the terminal when asked.
-2. **Dry run**: `sfdemo run --dry-run`. Fix every error it prints, and show the user the plan.
-3. **Warn about side effects** before recording: every message spends agent credits and can run real actions.
-4. **Record**: `sfdemo run` (in the background for long batches), or point the user to `sfdemo ui`.
-5. **Review** `report.md` (flags, warnings, failures) rather than every transcript; open a few PNGs only when a
+2. **What the recording shows**: by default the answer screenshots and the GIF show only the chat, the MP4 the
+   whole page. When the user wants only the Agentforce conversation ("just the chat", a video for a slide), set
+   `area: chat` in the scenario's front matter, or run `sfdemo run --area chat`: the screenshots, the MP4 and the
+   GIF then all show the Lightning panel or the Messaging widget alone. When the page around the chat matters (the
+   record the agent works on), `area: page`. For every scenario of a project, `"defaults": { "area": "chat" }` in
+   `sfdemo.config.json`. `sfdemo` never films the desktop: for the whole screen, point the user to their
+   system's recorder (macOS: Shift-Command-5).
+3. **Dry run**: `sfdemo run --dry-run`. Fix every error it prints, and show the user the plan (it says "the chat
+   only" or "the whole page" when `area` is set).
+4. **Warn about side effects** before recording: every message spends agent credits and can run real actions.
+5. **Record**: `sfdemo run` (in the background for long batches), or point the user to `sfdemo ui`.
+6. **Review** `report.md` (flags, warnings, failures) rather than every transcript; open a few PNGs only when a
    flag says a screenshot is blank or misses its question. Report failures with the reason the tool gave; a failed
    conversation keeps `error.png` and its raw video.
 

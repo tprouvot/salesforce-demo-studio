@@ -79,6 +79,7 @@ Does it include helmets?",pass,
 | `site` | | Messaging: URL of the page where the widget loads |
 | `network` | the user's only site | Experience Cloud site (name or Id) for a community user's Login-As |
 | `viewport` | `desktop` (1440x900 at 2x) | `mobile` (390x844 at 3x, Messaging only) or `WIDTHxHEIGHT` |
+| `area` | the chat in screenshots and the GIF, the whole page in the MP4 | `chat`: only the Agentforce panel or the Messaging widget, in the screenshots, the MP4 and the GIF; `page`: the whole browser page in all of them. See [the README](../README.md#only-the-chat-or-the-whole-page) |
 | `record` | `screenshots, video, gif` | any subset; `none` keeps only the transcript |
 | `fresh` | `true` | start clean: end a Messaging chat left open, clear the Lightning panel's history |
 | `warmup` | `Hi` | Messaging: greeting sent first when the first message isn't one; `false` to disable |

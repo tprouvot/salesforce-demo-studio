@@ -5,11 +5,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { ffmpegBinary, makeMp4, makeGif, probeDuration } from '../src/engine/media.js';
+import { ffmpegBinary, makeMp4, makeGif, probeDuration, cropFilter } from '../src/engine/media.js';
+import { gifSize, videoSize } from './helpers/sizes.js';
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-media-'));
 const clip = path.join(tmp, 'clip.mp4');
-const gifSize = file => { const b = fs.readFileSync(file); return { width: b.readUInt16LE(6), height: b.readUInt16LE(8) }; };
 
 before(() => {
   // four seconds of a moving test pattern, 320x240, the stand-in for a recorded conversation
@@ -30,6 +30,14 @@ test('the MP4 keeps only its segments, in order; without segments, the whole rec
   const whole = path.join(tmp, 'whole.mp4');
   await makeMp4(clip, whole, []);
   assert.ok(Math.abs(await probeDuration(whole) - 4) < 0.2);
+});
+
+test('the MP4 cropped to the chat (area: chat), as the GIF is', async () => {
+  const cropped = path.join(tmp, 'cropped.mp4');
+  await makeMp4(clip, cropped, [[0, 1000]], { x: 10.6, y: 20.2, width: 151, height: 400 }, { width: 320, height: 240 });
+  assert.deepEqual(videoSize(cropped), { width: 150, height: 220 });
+  assert.equal(cropFilter({ x: 0, y: 0, width: 40, height: 40 }, { width: 320, height: 240 }), '', 'too small to be a chat');
+  assert.equal(cropFilter(null, { width: 320, height: 240 }), '');
 });
 
 test('the GIF: cropped to the chat (even sizes, inside the frame), no crop when the box is too small, capped in width', async () => {

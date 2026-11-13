@@ -49,6 +49,9 @@ sfdemo demo demos/<name>.md --org <alias>    # voice-over, live recording, the v
   completed is kept. Slides-only chapters need no browser.
 - The video is `<recordings>/<name>/<name>.mp4`, with `<name>.srt` and `assembly.json` (which take each chapter
   used). Look at a few frames before showing it: `ffmpeg -ss <seconds> -i <mp4> -frames:v 1 frame.png`.
+- It shows the window in front whole (the browser page, the terminal, the editor), never the user's desktop, and
+  never a window cropped to its chat. A video of the Agentforce conversation alone is a conversation recording:
+  `sfdemo run --area chat` ([agentforce-conversation-recorder](../agentforce-conversation-recorder/SKILL.md)).
 - To redo one chapter: `sfdemo demo demos/<name>.md --only 3 --retake`. Only the video again (after editing
   slides): `--video-only`. A line of narration changed: run it again; only that line is re-read.
 

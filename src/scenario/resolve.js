@@ -98,6 +98,7 @@ export function resolveConversation(raw, defaults = {}) {
   conv.network = s.network;
   conv.agent = s.agent;
   conv.viewport = parseViewport(s.viewport);
+  conv.area = s.area || null; // null: the screenshots and the GIF show the chat, the MP4 the whole page
   conv.record = parseRecord(s.record, where);
   conv.fresh = s.fresh !== false;
   conv.hideLoginAsBanner = s.hideLoginAsBanner === true;

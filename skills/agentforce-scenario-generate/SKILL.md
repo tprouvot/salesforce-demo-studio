@@ -18,7 +18,7 @@ Ask when the user has not said:
 | Files | one `.md` per story, 3 to 6 messages | a `.csv`, or one `.md` per topic or risk |
 | Messages | the happy path, as the persona would phrase it | every topic, follow-ups, an off-topic request, a hand-off |
 | Checks | few: `expect-not:` on failures, `expect-button:` on a card | on every answer, calibrated on a probe run (step 5) |
-| Record | the default: screenshots, video, GIF | `record: screenshots` or `none`, then a baseline |
+| Record | the default: screenshots, video, GIF; `area: chat` for the chat alone, `area: page` for the page around it | `record: screenshots` or `none`, then a baseline |
 
 Settle too who signs in (the sf alias's user, Login-As of a persona's user, a guest) and where: the Lightning
 panel, or the page where the Messaging widget loads. Never guess a site URL: ask for it.

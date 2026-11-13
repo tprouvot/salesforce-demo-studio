@@ -174,12 +174,37 @@ the recordings.
 
 For each conversation, in `.local/recordings/<date-time>/<conversation>/`:
 
-- `NN-<message>.png`: the chat only (panel or widget), at 2x, scrolled so the question is at the top
+- `NN-<message>.png`: one screenshot per answer, at 2x, scrolled so the question is at the top; `00-open.png` and
+  `99-end.png`: the chat once open, and at the end
 - `conversation.mp4`: typing and answers at real speed, each thinking pause cut to about 1.5 s
-- `conversation.gif`: the same, cropped to the chat; `conversation.webm`: the raw recording
+- `conversation.gif`: the same video as a GIF; `conversation.webm`: the raw recording, always the whole page
 - `transcript.md`: questions, answers, timings, check results; `timeline.json`: the cut points
 
 And for the run: `report.html` (self-contained: share the folder as is), `report.md`, `report.json`.
+
+### Only the chat, or the whole page
+
+By default the answer screenshots and the GIF show only the chat, and the MP4 shows the whole page. `area`
+changes that for everything a conversation records:
+
+```sh
+sfdemo run --area chat    # only the Agentforce conversation: the Lightning panel or the Messaging widget
+sfdemo run --area page    # the whole browser page, with what is around the chat
+```
+
+| `area` | Screenshots | `conversation.mp4` | `conversation.gif` |
+| --- | --- | --- | --- |
+| left out | the chat (`00-open`, `99-end`: the page) | the whole page | the chat |
+| `chat` | the chat | the chat | the chat |
+| `page` | the whole page | the whole page | the whole page |
+
+`--area` applies to the scenarios that do not set it. To fix it for one scenario, put `area: chat` in its front
+matter; for the whole project, put it in `defaults` in `sfdemo.config.json`; in `sfdemo ui`, it is the **area**
+setting under Recording. A chat-only video is the size of the chat on the page (a few hundred pixels wide):
+crisp in a slide, small in full screen. A larger `viewport` shows more of the page, not a larger chat.
+
+`sfdemo` films its own browser, never your desktop: to record your whole screen, use your system's recorder
+(on macOS, Shift-Command-5).
 
 ## Scenarios
 

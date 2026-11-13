@@ -126,7 +126,10 @@ export async function runConversation(browser, conv, ctx) {
     await surface.read();
     await surface.scroll({ bottom: true });
     mark('ready');
-    if (conv.record.screenshots) await page.screenshot({ path: path.join(dir, '00-open.png') });
+    if (conv.record.screenshots) { // the whole page, unless area: chat
+      const box = conv.area === 'chat' ? clip(await surface.cropBox().catch(() => null), conv.viewport) : null;
+      await page.screenshot({ path: path.join(dir, '00-open.png'), ...(box ? { clip: box } : {}) });
+    }
 
     let n = 0;
     let stopped = false; // the conversation ended early: a hand-off, or no input for type-from
@@ -203,7 +206,7 @@ export async function runConversation(browser, conv, ctx) {
         exchange.screenshot = `${pad(n)}-${slug(step.prompt ? 'code' : step.text || step.label)}.png`;
         const box = clip(await surface.cropBox().catch(() => null), conv.viewport);
         const shot = path.join(dir, exchange.screenshot);
-        await page.screenshot({ path: shot, ...(box ? { clip: box } : {}) });
+        await page.screenshot({ path: shot, ...(box && conv.area !== 'page' ? { clip: box } : {}) });
         if (looksBlank(shot, checks.minBytesPerMegapixel)) result.flags.push(`${n}: the screenshot ${exchange.screenshot} looks blank`);
         if (step.type === 'message' && reply && !reply.handoff && box) {
           const frame = await surface.chatFrame();
@@ -223,7 +226,10 @@ export async function runConversation(browser, conv, ctx) {
     await sleep(500);
     mark('end');
     crop = await surface.cropBox().catch(() => null);
-    if (conv.record.screenshots) await page.screenshot({ path: path.join(dir, '99-end.png') });
+    if (conv.record.screenshots) {
+      const box = conv.area === 'chat' ? clip(crop, conv.viewport) : null;
+      await page.screenshot({ path: path.join(dir, '99-end.png'), ...(box ? { clip: box } : {}) });
+    }
   } catch (e) {
     result.status = 'failed';
     result.error = e.message.split('\n')[0];
@@ -252,11 +258,14 @@ export async function runConversation(browser, conv, ctx) {
     try {
       const mp4 = path.join(dir, 'conversation.mp4');
       log('cutting the video');
-      await media.makeMp4(webm, mp4, segments);
+      // area: chat crops the MP4 itself, so its GIF needs no crop; area: page crops neither
+      const chatOnly = conv.area === 'chat' && !!media.cropFilter(crop, conv.viewport);
+      if (conv.area === 'chat' && !chatOnly) result.warnings.push('area: chat, but the chat was not found at the end: the MP4 and the GIF show the whole page');
+      await media.makeMp4(webm, mp4, segments, chatOnly ? crop : null, conv.viewport);
       if (videoTooLong(await media.probeDuration(mp4), segments, checks.videoSlackSeconds)) result.flags.push('video: the MP4 is longer than its cut list: the thinking pauses may not be cut');
       if (conv.record.gif) {
         const gif = path.join(dir, 'conversation.gif');
-        await media.makeGif(mp4, gif, crop, conv.viewport);
+        await media.makeGif(mp4, gif, conv.area ? null : crop, conv.viewport, conv.area === 'page' ? { maxWidth: 960 } : {});
         const size = fs.statSync(gif).size;
         if (checks.gifMaxBytes && size > checks.gifMaxBytes) result.flags.push(`video: the GIF is ${(size / 1e6).toFixed(1)} MB, above the ${(checks.gifMaxBytes / 1e6).toFixed(1)} MB limit`);
         result.outputs.push('conversation.gif');

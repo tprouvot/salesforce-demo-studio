@@ -24,6 +24,7 @@
         "path": { "type": "string", "pattern": "^/", "description": "Lightning only, optional: any Lightning path, such as a record page. Wins over app.", "x-group": "Where" },
         "site": { "type": "string", "format": "uri", "description": "Messaging only: the URL of the page where the Embedded Messaging widget loads.", "x-group": "Where" },
         "viewport": { "type": "string", "pattern": "^(desktop|mobile|\\d{3,4}x\\d{3,4})$", "description": "desktop (1440x900 at 2x), mobile (390x844 at 3x, Messaging only) or WIDTHxHEIGHT.", "x-group": "Recording" },
+        "area": { "type": "string", "enum": ["chat", "page"], "description": "What the screenshots, the MP4 and the GIF show: chat (the panel or widget only) or page (the whole browser page). Default: the chat in the screenshots and the GIF, the whole page in the MP4.", "x-group": "Recording" },
         "record": { "description": "What to keep: any of screenshots, video, gif; none keeps only the transcript.", "anyOf": [{ "type": "string" }, { "type": "array", "items": { "type": "string", "enum": ["screenshots", "video", "gif", "none"] } }], "x-group": "Recording" },
         "fresh": { "type": "boolean", "description": "Start clean: end a Messaging chat left open, clear the Lightning panel history (default true).", "x-group": "Recording" },
         "warmup": { "anyOf": [{ "type": "string" }, { "type": "boolean" }], "description": "Messaging: the greeting sent first when the first message isn't one (default Hi); false disables it.", "x-group": "Recording" },
