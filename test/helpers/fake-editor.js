@@ -17,6 +17,7 @@ export const fakeEditorSupported = process.platform !== 'win32';
  * @param {{ wall?: boolean }} [options] wall: the editor shows a login screen (as Cursor does before a login)
  */
 export function installFakeEditor({ wall = false } = {}) {
+  // Chromium started by hand, not by Playwright: --no-sandbox as Playwright passes it (Ubuntu runners refuse the sandbox)
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sfdemo-fake-editor-'));
   const app = path.join(dir, 'code-app');
   const calls = path.join(dir, 'calls.log');
@@ -33,7 +34,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-exec "${chromium.executablePath()}" --headless=new --no-first-run --no-default-browser-check --user-data-dir="$ud/fake-chromium" --remote-debugging-port="$port" "file://${PAGE}?folder=$folder&wall=${wall ? 1 : 0}"
+exec "${chromium.executablePath()}" --headless=new --no-sandbox --no-first-run --no-default-browser-check --user-data-dir="$ud/fake-chromium" --remote-debugging-port="$port" "file://${PAGE}?folder=$folder&wall=${wall ? 1 : 0}"
 `);
   fs.chmodSync(app, 0o755);
   fs.mkdirSync(path.join(dir, 'bin'));

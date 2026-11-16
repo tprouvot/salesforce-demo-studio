@@ -21,12 +21,12 @@ test('terminal and editor windows: their folder (from the script), their setting
   Abs: { terminal: /tmp/work }
   Code: { vscode: .., files: README.md, extensions: [salesforce.salesforcedx-vscode], settings: { "editor.fontSize": 18 }, theme: Default Light Modern, zoom: 1 }
   Cur: { cursor: ../app }`);
-  assert.deepEqual(d.windows.Shell, { name: 'Shell', label: 'Terminal', surface: 'terminal', signIn: 'none', identity: 'terminal|Shell', folder: path.join(path.sep, 'work', 'demos'), title: 'my-demos', prompt: 'my-demos %', theme: 'light' });
+  assert.deepEqual(d.windows.Shell, { name: 'Shell', label: 'Terminal', surface: 'terminal', signIn: 'none', identity: 'terminal|Shell', folder: path.resolve(path.sep, 'work', 'demos'), title: 'my-demos', prompt: 'my-demos %', theme: 'light' });
   assert.equal(d.windows.Home.folder, path.join(os.homedir(), 'projects'));
   assert.equal(d.windows.Abs.folder, path.resolve('/tmp/work'));
   assert.equal(d.windows.Code.surface, 'editor');
   assert.equal(d.windows.Code.editor, 'vscode');
-  assert.equal(d.windows.Code.folder, path.join(path.sep, 'work'));
+  assert.equal(d.windows.Code.folder, path.resolve(path.sep, 'work'));
   assert.deepEqual(d.windows.Code.files, ['README.md'], 'one file is a list of one');
   assert.deepEqual(d.windows.Code.extensions, ['salesforce.salesforcedx-vscode']);
   assert.equal(d.windows.Code.zoom, 1);
