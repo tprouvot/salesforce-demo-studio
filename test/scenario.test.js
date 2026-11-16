@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { readScenarioFiles, parseScenarioText, toMarkdown } from '../src/scenario/parse.js';
 import { resolveConversation } from '../src/scenario/resolve.js';
 
@@ -40,7 +41,7 @@ test('markdown: the new checks, type-from prompt and file, comments after direct
   assert.equal(conv.steps[4].seconds, 20);
   assert.equal(conv.steps[5].label, '/reserve/');
   assert.deepEqual([conv.steps[6].prompt, conv.steps[6].fromFile, conv.steps[6].label], [true, null, 'one-time code']);
-  assert.equal(conv.steps[7].fromFile, '/tmp/sfdemo-code.txt');
+  assert.equal(conv.steps[7].fromFile, path.resolve('/tmp/sfdemo-code.txt'));
   assert.equal(conv.inputTimeout, 600000);
 });
 
@@ -116,7 +117,7 @@ test('toMarkdown round-trips settings and steps', () => {
 });
 
 test('the e-bike examples parse and resolve', () => {
-  const dir = new URL('../examples/ebike/', import.meta.url).pathname;
+  const dir = fileURLToPath(new URL('../examples/ebike/', import.meta.url));
   const raws = readScenarioFiles([dir]);
   assert.ok(raws.length >= 5, `${raws.length} conversations`);
   for (const r of raws) resolveConversation(r, { org: 'myAdminAlias' });

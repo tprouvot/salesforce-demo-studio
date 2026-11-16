@@ -108,9 +108,9 @@ test('draft settings: the surface from the flags or the agent; agent: only on Li
   assert.deepEqual(draftSettings({ agent: 'Rider Help', site: 'https://x.example.com/' }, { agent: { label: 'Rider Help', type: 'ExternalCopilot' } }), { surface: 'messaging', site: 'https://x.example.com/' });
   assert.deepEqual(draftSettings({}, fleet.facts, { org: 'acme' }), { surface: 'lightning', agent: 'Fleet Assistant' }, 'the org of the defaults stays inherited');
   const project = { scenariosDir: '/p/scenarios' };
-  assert.equal(draftFile(project, null, { label: 'Fleet Assistant' }), '/p/scenarios/fleet-assistant.md');
-  assert.equal(draftFile(project, 'Morning round'), '/p/scenarios/morning-round.md');
-  assert.equal(draftFile(project), '/p/scenarios/conversation.md');
+  assert.equal(draftFile(project, null, { label: 'Fleet Assistant' }), path.join('/p/scenarios', 'fleet-assistant.md'));
+  assert.equal(draftFile(project, 'Morning round'), path.join('/p/scenarios', 'morning-round.md'));
+  assert.equal(draftFile(project), path.join('/p/scenarios', 'conversation.md'));
   assert.equal(draftFile(project, 'elsewhere/x.md'), path.resolve('elsewhere/x.md'));
 });
 

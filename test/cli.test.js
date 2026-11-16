@@ -208,7 +208,7 @@ test('demos on the command line: the speaker notes, the voice-over plan, the voi
     assert.match(run('voices', '--installed').out, /^en_US-amy-medium +en_US/m);
     const missing = run('demos/intro.md');
     assert.equal(missing.code, 2, 'a demo file given as is is played as a demo');
-    assert.match(missing.err, /no image for slide\(s\) 1, 2 in .*demos\/slides: export the deck's slides there first/);
+    assert.match(missing.err, /no image for slide\(s\) 1, 2 in .*demos[\\/]slides: export the deck's slides there first/);
     const bad = run('narrate', path.join(cwd, 'demos', 'nope.md'));
     assert.equal(bad.code, 2);
   } finally { piper.restore(); }

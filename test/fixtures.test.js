@@ -5,6 +5,8 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { listFixtures, testFixture, openFixture } from '../src/doctor/fixtures.js';
 import { effectivePack } from '../src/selectors/packs.js';
@@ -13,7 +15,7 @@ import { awaitReply } from '../src/engine/reply.js';
 import { serializeTree, readChat } from '../src/engine/inpage.js';
 import { redactTree, renderHtml } from '../src/doctor/redact.js';
 
-const root = new URL('../fixtures/', import.meta.url).pathname;
+const root = fileURLToPath(new URL('../fixtures/', import.meta.url));
 const hasBrowser = fs.existsSync(chromium.executablePath());
 if (!hasBrowser && process.env.SFDEMO_REQUIRE_BROWSER) throw new Error('Chromium is missing: npx playwright install chromium');
 let browser = null;
@@ -30,7 +32,7 @@ for (const dir of listFixtures([root])) {
 }
 
 test('the structural fallback, end to end: awaitReply heals and the reader then sees the chat', { skip: !hasBrowser && 'Chromium is not installed' }, async () => {
-  const { context, page } = await openFixture(browser, `${root}lightning/synthetic-renamed`);
+  const { context, page } = await openFixture(browser, path.join(root, 'lightning', 'synthetic-renamed'));
   try {
     const healedNames = [];
     const surface = createSurface(page, { surface: 'lightning', name: 'x' }, JSON.parse(JSON.stringify(effectivePack('lightning', null, null))), { onHeal: e => healedNames.push(...Object.keys(e)) });
@@ -43,7 +45,7 @@ test('the structural fallback, end to end: awaitReply heals and the reader then 
 });
 
 test('a snapshot of a fixture renders back to a page the reader understands (serialize, redact, render)', { skip: !hasBrowser && 'Chromium is not installed' }, async () => {
-  const { context, page } = await openFixture(browser, `${root}lightning/synthetic-panel`);
+  const { context, page } = await openFixture(browser, path.join(root, 'lightning', 'synthetic-panel'));
   try {
     const pack = effectivePack('lightning', null, null);
     const raw = await page.evaluate(serializeTree, { rootCandidates: pack.elements.panel.candidates });
