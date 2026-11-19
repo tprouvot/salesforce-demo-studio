@@ -53,6 +53,10 @@ deck"*. Claude asks what it needs (the audience, the length, who appears on scre
 has, writes the script, lets you hear a few voices, creates the Google Slides deck from the Salesforce template with
 the narration in its speaker notes, records the demo and shows you the video.
 
+It follows your project more closely when you give Claude files about the project or the demo as context first:
+a README, a design note, the agent's instructions, a talk outline, an existing deck. Attach them to the chat
+before you ask.
+
 | Skill | Does |
 | --- | --- |
 | [salesforce-demo-studio](skills/salesforce-demo-studio/SKILL.md) | the whole demo, from your goal to the video |
